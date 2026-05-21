@@ -17,5 +17,5 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: luish-build
-          path: ./luish.nds
+          name: Luish-OS-Build
+          path: ./main.nds
