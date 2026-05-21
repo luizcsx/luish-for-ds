@@ -1,0 +1,21 @@
+name: Build Luish
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: devkitpro/devkitarm:latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Build NDS Image
+        run: |
+          make
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: luish-build
+          path: luish.nds
