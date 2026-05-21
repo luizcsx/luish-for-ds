@@ -8,14 +8,14 @@ jobs:
     container: devkitpro/devkitarm:latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Build NDS Image
         run: |
           make
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: luish-build
-          path: luish.nds
+          path: ./luish.nds
