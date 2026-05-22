@@ -9,7 +9,7 @@ SECTIONS {
     . = 0x02000000;
     
     .text : ALIGN(4) {
-        crt0.o(.init)
+        *(.init)
         *(.text)
         *(.text.*)
         *(.rodata)
@@ -24,9 +24,11 @@ SECTIONS {
     } > RAM_ARM9
 
     .bss : ALIGN(4) {
+        __bss_start = .;
         *(.bss)
         *(.bss.*)
         *(COMMON)
         . = ALIGN(4);
+        __bss_end = .;
     } > RAM_ARM9
 }
