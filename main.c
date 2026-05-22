@@ -7,9 +7,22 @@
 #define KEY_DOWN   (1 << 7)
 #define KEY_A      (1 << 0)
 
+#define VRAM_TOP   ((volatile unsigned short*)0x06800000)
+
 void wait_vblank(void) {
     while (REG_VCOUNT >= 192);
     while (REG_VCOUNT < 192);
+}
+
+void apagar_caractere(int x, int y) {
+    for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
+            int pixel = (y + row) * 256 + (x + col);
+            if (pixel >= 0 && pixel < 256 * 192) {
+                VRAM_TOP[pixel] = COLOR_BACKGROUND;
+            }
+        }
+    }
 }
 
 int main(void) {
@@ -36,11 +49,11 @@ int main(void) {
 
         if (pressed & (KEY_DOWN | KEY_UP)) {
             if (selected_index == 0) {
-                video_print_text(" ", 48, 64);
+                apagar_caractere(48, 64);
                 selected_index = 1;
                 video_print_text(">", 48, 80);
             } else {
-                video_print_text(" ", 48, 80);
+                apagar_caractere(48, 80);
                 selected_index = 0;
                 video_print_text(">", 48, 64);
             }
