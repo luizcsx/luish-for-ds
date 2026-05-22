@@ -6,8 +6,10 @@ LD      = $(DEVKITARM)/bin/arm-none-eabi-ld
 OBJCOPY = $(DEVKITARM)/bin/arm-none-eabi-objcopy
 NDSTOOL = /opt/devkitpro/tools/bin/ndstool
 
-CFLAGS  = -mthumb-interwork -marm -O2 -Wall
+CFLAGS  = -mthumb-interwork -marm -O2 -Wall -I. -I./data
 ASFLAGS = -mthumb-interwork
+
+OBJS = crt0.o main.o data/video.o
 
 all: main.nds
 
@@ -15,17 +17,21 @@ main.nds: main.elf
 	$(OBJCOPY) -O binary main.elf arm9.bin
 	touch arm7.bin
 	mkdir -p nitrofiles
-	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles
-	rm -f arm9.bin arm7.bin
+	
+	echo "Luish" > header.txt
+	
+	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -h header.txt
+	
+	rm -f arm9.bin arm7.bin header.txt
 
-main.elf: crt0.o main.o
-	$(LD) -T nds.ld crt0.o main.o -o main.elf
+main.elf: $(OBJS)
+	$(LD) -T nds.ld $(OBJS) -o main.elf
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 crt0.o: crt0.s
 	$(AS) $(ASFLAGS) crt0.s -o crt0.o
 
-main.o: main.c
-	$(CC) $(CFLAGS) -c main.c -o main.o
-
 clean:
-	rm -f *.o *.elf *.bin *.nds
+	rm -f *.o data/*.o *.elf *.bin *.nds
