@@ -16,19 +16,21 @@ all: main.nds
 main.nds: main.elf
 	$(OBJCOPY) -O binary main.elf arm9.bin
 	touch arm7.bin
-	mkdir -p nitrofiles
 	
-	@echo "LUISH" > header.txt
-	@echo "Luish for Nintendo DS" >> header.txt
-	@echo "Luish for Nintendo DS" >> header.txt
-	@echo "Luish for Nintendo DS" >> header.txt
-	@echo "Luish for Nintendo DS" >> header.txt
-	@echo "Luish for Nintendo DS" >> header.txt
-	@echo "Luish for Nintendo DS" >> header.txt
+	@echo "LUISH" > banner.txt
+	@echo "Luish for Nintendo DS" >> banner.txt # Japanese Entry
+	@echo "Luish for Nintendo DS" >> banner.txt # English Entry
+	@echo "Luish for Nintendo DS" >> banner.txt # French Entry
+	@echo "Luish for Nintendo DS" >> banner.txt # German Entry
+	@echo "Luish for Nintendo DS" >> banner.txt # Italian Entry
+	@echo "Luish for Nintendo DS" >> banner.txt # Spanish Entry
 	
-	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -h header.txt
+	$(NDSTOOL) -m banner.bin -t banner.txt
 	
-	rm -f arm9.bin arm7.bin header.txt
+	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -b banner.bin
+	
+	# Limpeza dos estágios de compilação
+	rm -f arm9.bin arm7.bin banner.txt banner.bin
 
 main.elf: $(OBJS)
 	$(LD) -T nds.ld $(OBJS) -o main.elf
