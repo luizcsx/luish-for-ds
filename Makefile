@@ -25,11 +25,9 @@ main.nds: main.elf
 	@echo "Luish for Nintendo DS" >> banner.txt # Italian Entry
 	@echo "Luish for Nintendo DS" >> banner.txt # Spanish Entry
 	
-	$(NDSTOOL) -m banner.bin -t banner.txt
+	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -b banner.txt -g LUSH
 	
-	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -b banner.bin -g LUSH
-	
-	rm -f arm9.bin arm7.bin banner.txt banner.bin
+	rm -f arm9.bin arm7.bin banner.txt
 
 main.elf: $(OBJS)
 	$(LD) -T nds.ld $(OBJS) -o main.elf
