@@ -22,7 +22,7 @@ main.nds: main.elf arm7.bin
 
 arm7.bin: arm7.c
 	$(CC) $(CFLAGS) -c arm7.c -o arm7.o
-	$(LD) arm7.o -o arm7.elf
+	$(LD) -Ttext 0x03800000 arm7.o -o arm7.elf
 	$(OBJCOPY) -O binary arm7.elf arm7.bin
 
 main.elf: $(OBJS)
