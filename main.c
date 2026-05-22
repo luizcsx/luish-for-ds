@@ -67,8 +67,8 @@ void terminal_escrever_char(char c) {
     }
 
     if (sys_terminal.cursor_y + 8 > 180) {
-        sys_terminal.cursor_y = 8;
-        for (int i = 0; i < 256 * 192; i++) VRAM_TOP[i] = COLOR_BACKGROUND;
+        sys_terminal.cursor_y = 30;
+        for (int i = 30 * 256; i < 256 * 192; i++) VRAM_TOP[i] = COLOR_BACKGROUND;
     }
 
     for (int linha = 0; linha < 8; linha++) {
@@ -117,12 +117,13 @@ int main(void) {
         VRAM_TOP[20 * 256 + x] = COLOR_ACCENT;
     }
 
+    sys_terminal.cursor_x = 8;
+    sys_terminal.cursor_y = 6;
+    terminal_escrever_texto("Luish Kernel");
+
+    sys_terminal.cursor_x = 8;
     sys_terminal.cursor_y = 30;
     terminal_escrever_texto("Hello, made by Luiz Miguel");
-    
-    sys_terminal.cursor_x = 8;
-    sys_terminal.cursor_y = 8;
-    terminal_escrever_texto("Luish Kernel");
 
     while (1) {
         atualizar_sistema_toque();
