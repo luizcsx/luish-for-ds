@@ -27,7 +27,7 @@ main.nds: main.elf
 	
 	$(NDSTOOL) -m banner.bin -t banner.txt
 	
-	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -b banner.bin
+	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -b banner.bin -m 01 -g LUSH
 	
 	rm -f arm9.bin arm7.bin banner.txt banner.bin
 
