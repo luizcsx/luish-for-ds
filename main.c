@@ -10,7 +10,7 @@ void wait_vblank(void) {
 int main(void) {
     video_init();
     wait_vblank();
-    
+   
     video_clear_screens();
     video_draw_divider();
 
