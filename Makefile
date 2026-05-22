@@ -17,7 +17,7 @@ main.nds: main.elf
 	$(OBJCOPY) -O binary main.elf arm9.bin
 	touch arm7.bin
 	
-	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -h "LUISH" -g LUSH
+	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -g LUSH
 	
 	rm -f arm9.bin arm7.bin
 
