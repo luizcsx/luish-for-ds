@@ -8,25 +8,25 @@ MEMORY {
 SECTIONS {
     . = 0x02000000;
     
-    .init : {
-        *(.init)
-    } > RAM_ARM9
-
-    .text : {
+    .text : ALIGN(4) {
+        crt0.o(.init)
         *(.text)
         *(.text.*)
         *(.rodata)
         *(.rodata.*)
+        . = ALIGN(4);
     } > RAM_ARM9
 
-    .data : {
+    .data : ALIGN(4) {
         *(.data)
         *(.data.*)
+        . = ALIGN(4);
     } > RAM_ARM9
 
-    .bss : {
+    .bss : ALIGN(4) {
         *(.bss)
         *(.bss.*)
         *(COMMON)
+        . = ALIGN(4);
     } > RAM_ARM9
 }
