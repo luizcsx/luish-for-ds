@@ -9,7 +9,7 @@ NDSTOOL = /opt/devkitpro/tools/bin/ndstool
 CFLAGS  = -mthumb-interwork -marm -O2 -Wall -I. -I./data -I./wmf
 ASFLAGS = -mthumb-interwork
 
-OBJS = crt0.o main.o data/video.o
+OBJS = main.o data/video.o
 
 all: main.nds
 
@@ -25,8 +25,8 @@ arm7.bin: arm7.c
 	$(LD) -Ttext 0x03800000 arm7.o -o arm7.elf
 	$(OBJCOPY) -O binary arm7.elf arm7.bin
 
-main.elf: $(OBJS)
-	$(LD) -T nds.ld $(OBJS) -o main.elf
+main.elf: crt0.o $(OBJS)
+	$(LD) -T nds.ld crt0.o $(OBJS) -o main.elf
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
