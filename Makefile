@@ -6,7 +6,7 @@ LD      = $(DEVKITARM)/bin/arm-none-eabi-ld
 OBJCOPY = $(DEVKITARM)/bin/arm-none-eabi-objcopy
 NDSTOOL = /opt/devkitpro/tools/bin/ndstool
 
-CFLAGS  = -mthumb-interwork -marm -O2 -Wall -I. -I./data
+CFLAGS  = -mthumb-interwork -marm -O2 -Wall -I. -I./data -I./wmf
 ASFLAGS = -mthumb-interwork
 
 OBJS = crt0.o main.o data/video.o
@@ -29,7 +29,6 @@ main.nds: main.elf
 	
 	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -b banner.bin
 	
-	# Limpeza dos estágios de compilação
 	rm -f arm9.bin arm7.bin banner.txt banner.bin
 
 main.elf: $(OBJS)
