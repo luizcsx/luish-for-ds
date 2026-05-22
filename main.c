@@ -16,32 +16,33 @@ int main(void) {
     video_init();
     wait_vblank();
     
+    video_clear_screens();
+    video_draw_divider();
+    video_print_text("Initialize the system?", 4, 4);
+    video_print_text("  Yes", 6, 8);
+    video_print_text("  No", 6, 10);
+
     int selected_index = 0; 
     unsigned short last_keys = 0xFFFF;
+
+    video_print_text(">", 6, 8);
 
     while (1) {
         wait_vblank();
         
-        video_print_text("Initialize the system?", 4, 4);
-        video_draw_divider();
-
-        if (selected_index == 0) {
-            video_print_text("> Yes", 6, 8);
-            video_print_text("  No ", 6, 10);
-        } else {
-            video_print_text("  Yes", 6, 8);
-            video_print_text("> No ", 6, 10);
-        }
-
         unsigned short current_keys = REG_KEYINPUT;
         unsigned short pressed = (last_keys ^ current_keys) & (~current_keys);
         last_keys = current_keys;
 
         if (pressed & (KEY_DOWN | KEY_UP)) {
             if (selected_index == 0) {
+                video_print_text(" ", 6, 8);
                 selected_index = 1;
+                video_print_text(">", 6, 10);
             } else {
+                video_print_text(" ", 6, 10);
                 selected_index = 0;
+                video_print_text(">", 6, 8);
             }
         }
         
@@ -49,7 +50,7 @@ int main(void) {
             video_clear_screens();
             video_draw_divider();
             if (selected_index == 0) {
-                video_print_text("Booting Luish system...", 4, 8);
+                video_print_text("Booting Luish Kernel...", 4, 8);
             } else {
                 video_print_text("Boot Aborted.", 4, 8);
             }
