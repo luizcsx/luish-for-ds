@@ -1,4 +1,4 @@
-#include "data/video.h"
+#include "video.h"
 
 #define REG_VCOUNT *(volatile unsigned short*)0x04000006
 
@@ -10,7 +10,7 @@ void wait_vblank(void) {
 int main(void) {
     video_init();
     wait_vblank();
-   
+    
     video_clear_screens();
     video_draw_divider();
 
