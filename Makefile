@@ -17,9 +17,7 @@ main.nds: main.elf
 	$(OBJCOPY) -O binary main.elf arm9.bin
 	touch arm7.bin
 	mkdir -p nitrofiles
-	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles
-	
-	rm -f arm9.bin arm7.bin main.elf main.o crt0.o
+	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -b "" "Luish;Productivity and Creation System;Luiz Miguel"
 
 main.elf: crt0.o main.o
 	$(LD) $(LDFLAGS) crt0.o main.o -o main.elf
