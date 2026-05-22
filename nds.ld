@@ -1,9 +1,32 @@
 OUTPUT_ARCH(arm)
 ENTRY(_start)
-SECTIONS
-{
+
+MEMORY {
+    RAM_ARM9 (rwx) : ORIGIN = 0x02000000, LENGTH = 4M
+}
+
+SECTIONS {
     . = 0x02000000;
-    .text : { crt0.o(.text) *(.text) }
-    .data : { *(.data) }
-    .bss  : { *(.bss) }
+    
+    .init : {
+        *(.init)
+    } > RAM_ARM9
+
+    .text : {
+        *(.text)
+        *(.text.*)
+        *(.rodata)
+        *(.rodata.*)
+    } > RAM_ARM9
+
+    .data : {
+        *(.data)
+        *(.data.*)
+    } > RAM_ARM9
+
+    .bss : {
+        *(.bss)
+        *(.bss.*)
+        *(COMMON)
+    } > RAM_ARM9
 }
