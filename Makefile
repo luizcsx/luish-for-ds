@@ -18,7 +18,13 @@ main.nds: main.elf
 	touch arm7.bin
 	mkdir -p nitrofiles
 	
-	echo "Luish" > header.txt
+	@echo "LUISH" > header.txt
+	@echo "Luish for Nintendo DS" >> header.txt
+	@echo "Luish for Nintendo DS" >> header.txt
+	@echo "Luish for Nintendo DS" >> header.txt
+	@echo "Luish for Nintendo DS" >> header.txt
+	@echo "Luish for Nintendo DS" >> header.txt
+	@echo "Luish for Nintendo DS" >> header.txt
 	
 	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -h header.txt
 	
