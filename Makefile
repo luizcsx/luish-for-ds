@@ -15,9 +15,7 @@ all: main.nds
 
 main.nds: main.elf arm7.bin
 	$(OBJCOPY) -O binary main.elf arm9.bin
-	
 	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -g LUSH
-	
 	rm -f arm9.bin arm7.bin arm7.elf arm7.o
 
 arm7.bin: arm7.c
@@ -26,7 +24,7 @@ arm7.bin: arm7.c
 	$(OBJCOPY) -O binary arm7.elf arm7.bin
 
 main.elf: crt0.o $(OBJS)
-	$(LD) -T nds.ld crt0.o $(OBJS) -o main.elf
+	$(LD) -T nds.ld crt0.o $(OBJS) -lgcc -L$(DEVKITARM)/lib/gcc/arm-none-eabi/$(shell $(CC) -dumpversion) -o main.elf
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
