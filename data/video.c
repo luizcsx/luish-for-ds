@@ -83,11 +83,14 @@ const unsigned char basic_font[128][8] = {
 
 void video_init(void) {
     REG_POWERCNT = 0x80000000; 
+    
     VRAM_A_CR = 0x80; 
     REG_DISPCNT = 0x00020400; 
-    VRAM_C_CR = 0x82; 
+    
+    VRAM_C_CR = 0x81; 
     REG_DB_DISPCNT = 0x00020400; 
-    video_clear_screens();
+    
+    video_clear_screens(); 
 }
 
 void video_clear_screens(void) {
