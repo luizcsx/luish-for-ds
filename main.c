@@ -1,4 +1,8 @@
-#include "video.h"
+#define REG_POWERCNT    *(volatile unsigned int*)0x04000304
+#define REG_DISPCNT     *(volatile unsigned int*)0x04000000
+#define VRAM_A_CR       *(volatile unsigned int*)0x04000240
+#define REG_DB_DISPCNT  *(volatile unsigned int*)0x04001000
+#define VRAM_D_CR       *(volatile unsigned int*)0x04000243
 
 #define REG_KEYINPUT      *(volatile unsigned short*)0x04000130
 #define REG_VCOUNT        *(volatile unsigned short*)0x04000006
@@ -10,11 +14,128 @@
 #define REG_CH0_TMR       *(volatile unsigned short*)0x04000408
 #define REG_CH0_LEN       *(volatile unsigned int*)0x0400040C
 
+#define VRAM_TOP        ((volatile unsigned short*)0x06800000)
+#define VRAM_BOTTOM     ((volatile unsigned short*)0x06600000)
+
+#define COLOR_BACKGROUND 0x0000 
+#define COLOR_TEXT       0x7FFF 
+#define COLOR_ACCENT     0x03E0 
+
 #define KEY_UP     (1 << 6)
 #define KEY_DOWN   (1 << 7)
 #define KEY_A      (1 << 0)
 
-#define NEW_VRAM_BOTTOM   ((volatile unsigned short*)0x06600000)
+const unsigned char basic_font[128][8] = {
+    [' '] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+    ['!'] = {0x18, 0x18, 0x18, 0x18, 0x00, 0x00, 0x18, 0x00},
+    ['?'] = {0x3C, 0x66, 0x0C, 0x18, 0x18, 0x00, 0x18, 0x00},
+    ['.'] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x18, 0x00},
+    ['>'] = {0x30, 0x18, 0x0C, 0x06, 0x0C, 0x18, 0x30, 0x00},
+    [':'] = {0x00, 0x18, 0x18, 0x00, 0x18, 0x18, 0x00, 0x00},
+    ['/'] = {0x00, 0x0C, 0x18, 0x30, 0x60, 0x40, 0x00, 0x00},
+    ['_'] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00},
+    ['0'] = {0x3C, 0x66, 0x6E, 0x76, 0x66, 0x3C, 0x00, 0x00},
+    ['1'] = {0x18, 0x38, 0x18, 0x18, 0x18, 0x7E, 0x00, 0x00},
+    ['2'] = {0x3C, 0x66, 0x0C, 0x18, 0x30, 0x7E, 0x00, 0x00},
+    ['3'] = {0x3C, 0x66, 0x1C, 0x06, 0x66, 0x3C, 0x00, 0x00},
+    ['4'] = {0x1C, 0x3C, 0x5C, 0x7E, 0x1C, 0x1C, 0x00, 0x00},
+    ['5'] = {0x7E, 0x60, 0x7C, 0x06, 0x66, 0x3C, 0x00, 0x00},
+    ['A'] = {0x3C, 0x66, 0x66, 0x7E, 0x66, 0x66, 0x66, 0x00},
+    ['B'] = {0x7C, 0x66, 0x7C, 0x66, 0x66, 0x7C, 0x00, 0x00},
+    ['C'] = {0x3C, 0x66, 0x60, 0x60, 0x66, 0x3C, 0x00, 0x00},
+    ['D'] = {0x78, 0x6C, 0x66, 0x66, 0x6C, 0x78, 0x00, 0x00},
+    ['E'] = {0x7E, 0x60, 0x78, 0x60, 0x60, 0x7E, 0x00, 0x00},
+    ['F'] = {0x7E, 0x60, 0x78, 0x60, 0x60, 0x60, 0x00, 0x00},
+    ['G'] = {0x3E, 0x60, 0x60, 0x6E, 0x66, 0x3E, 0x00, 0x00},
+    ['H'] = {0x66, 0x66, 0x66, 0x7E, 0x66, 0x66, 0x66, 0x00},
+    ['I'] = {0x7E, 0x18, 0x18, 0x18, 0x18, 0x7E, 0x00, 0x00},
+    ['K'] = {0x66, 0x6C, 0x78, 0x78, 0x6C, 0x66, 0x00, 0x00},
+    ['L'] = {0x60, 0x60, 0x60, 0x60, 0x60, 0x7E, 0x00, 0x00},
+    ['M'] = {0x63, 0x77, 0x7B, 0x6B, 0x63, 0x63, 0x00, 0x00},
+    ['N'] = {0x63, 0x73, 0x7B, 0x6F, 0x67, 0x63, 0x00, 0x00},
+    ['O'] = {0x3C, 0x66, 0x66, 0x66, 0x66, 0x3C, 0x00, 0x00},
+    ['P'] = {0x7C, 0x66, 0x7C, 0x60, 0x60, 0x60, 0x00, 0x00},
+    ['R'] = {0x7C, 0x66, 0x7C, 0x6C, 0x66, 0x66, 0x00, 0x00},
+    ['S'] = {0x3E, 0x60, 0x3C, 0x06, 0x06, 0x7C, 0x00, 0x00},
+    ['T'] = {0x7E, 0x18, 0x18, 0x18, 0x18, 0x18, 0x00, 0x00},
+    ['U'] = {0x66, 0x66, 0x66, 0x66, 0x66, 0x3D, 0x00, 0x00},
+    ['V'] = {0x66, 0x66, 0x66, 0x66, 0x3C, 0x18, 0x00, 0x00},
+    ['W'] = {0xC6, 0xC6, 0xD6, 0xFE, 0xEE, 0x66, 0x00, 0x00},
+    ['X'] = {0x66, 0x66, 0x3C, 0x18, 0x3C, 0x66, 0x00, 0x00},
+    ['Y'] = {0x66, 0x66, 0x3C, 0x18, 0x18, 0x18, 0x00, 0x00},
+    ['Z'] = {0x7E, 0x0C, 0x18, 0x30, 0x60, 0x7E, 0x00, 0x00},
+    ['a'] = {0x00, 0x3E, 0x06, 0x3E, 0x66, 0x3B, 0x00, 0x00},
+    ['b'] = {0x60, 0x60, 0x7C, 0x66, 0x66, 0x7C, 0x00, 0x00},
+    ['c'] = {0x00, 0x3C, 0x66, 0x60, 0x66, 0x3C, 0x00, 0x00},
+    ['d'] = {0x06, 0x06, 0x3E, 0x66, 0x66, 0x3D, 0x00, 0x00},
+    ['e'] = {0x00, 0x3C, 0x66, 0x7E, 0x60, 0x3C, 0x00, 0x00},
+    ['g'] = {0x00, 0x3B, 0x66, 0x66, 0x3E, 0x06, 0x7C, 0x00},
+    ['h'] = {0x60, 0x60, 0x7C, 0x66, 0x66, 0x66, 0x00, 0x00},
+    ['i'] = {0x18, 0x00, 0x18, 0x18, 0x18, 0x1C, 0x00, 0x00},
+    ['l'] = {0x30, 0x30, 0x30, 0x30, 0x30, 0x1C, 0x00, 0x00},
+    ['m'] = {0x00, 0x66, 0xEF, 0xD6, 0xD6, 0xC6, 0x00, 0x00},
+    ['n'] = {0x00, 0xDC, 0x66, 0x66, 0x66, 0x66, 0x00, 0x00},
+    ['o'] = {0x00, 0x3C, 0x66, 0x66, 0x66, 0x3C, 0x00, 0x00},
+    ['r'] = {0x00, 0xAE, 0x76, 0x60, 0x60, 0x60, 0x00, 0x00},
+    ['s'] = {0x00, 0x3E, 0x60, 0x3C, 0x06, 0x7C, 0x00, 0x00},
+    ['t'] = {0x30, 0x7C, 0x30, 0x30, 0x34, 0x18, 0x00, 0x00},
+    ['u'] = {0x00, 0x66, 0x66, 0x66, 0x66, 0x3D, 0x00, 0x00},
+    ['v'] = {0x00, 0x66, 0x66, 0x66, 0x3C, 0x18, 0x00, 0x00}
+};
+
+void local_video_init(void) {
+    REG_POWERCNT = 0x80000000; 
+    
+    VRAM_A_CR = 0x80;
+    REG_DISPCNT = 0x00020400; 
+    
+    VRAM_D_CR = 0x80;
+    REG_DB_DISPCNT = 0x00020400; 
+    
+    for (int i = 0; i < 256 * 192; i++) {
+        VRAM_TOP[i] = COLOR_BACKGROUND;
+        VRAM_BOTTOM[i] = COLOR_BACKGROUND;
+    }
+}
+
+void local_draw_divider(void) {
+    for (int x = 0; x < 256; x++) {
+        VRAM_TOP[20 * 256 + x] = COLOR_ACCENT;
+        VRAM_BOTTOM[20 * 256 + x] = COLOR_ACCENT;
+    }
+}
+
+void local_print_text(const char* text, int x, int y, int target_screen) {
+    volatile unsigned short* vram = (target_screen == 0) ? VRAM_TOP : VRAM_BOTTOM;
+    int current_x = x;
+    while (*text) {
+        char c = *text;
+        for (int row = 0; row < 8; row++) {
+            unsigned char row_data = basic_font[(int)c][row];
+            for (int col = 0; col < 8; col++) {
+                if (row_data & (0x80 >> col)) {
+                    int pixel = (y + row) * 256 + (current_x + col);
+                    if (pixel >= 0 && pixel < 256 * 192) {
+                        vram[pixel] = COLOR_TEXT;
+                    }
+                }
+            }
+        }
+        current_x += 8;
+        text++;
+    }
+}
+
+void clear_bottom_character_slot(int x, int y) {
+    for (int row = 0; row < 8; row++) {
+        for (int col = 0; col < 8; col++) {
+            int pixel = (y + row) * 256 + (x + col);
+            if (pixel >= 0 && pixel < 256 * 192) {
+                VRAM_BOTTOM[pixel] = COLOR_BACKGROUND;
+            }
+        }
+    }
+}
 
 void wait_vblank(void) {
     while (REG_VCOUNT >= 192);
@@ -33,46 +154,38 @@ void trigger_audio_loop(void) {
     REG_CH0_CNT = 0xC47F0000; 
 }
 
-void clear_bottom_character_slot(int x, int y) {
-    for (int row = 0; row < 8; row++) {
-        for (int col = 0; col < 8; col++) {
-            int pixel = (y + row) * 256 + (x + col);
-            if (pixel >= 0 && pixel < 256 * 192) {
-                NEW_VRAM_BOTTOM[pixel] = COLOR_BACKGROUND;
-            }
-        }
-    }
-}
-
 void draw_welcome_screen(void) {
-    video_clear_screens();
-    video_draw_divider();
-    video_print_text_ext("Quer iniciar a build nova?", 32, 40, 0);
-    video_print_text_ext("  Yes", 48, 64, 1);
-    video_print_text_ext("  No", 48, 80, 1);
-    video_print_text_ext(">", 48, 64, 1); 
+    local_video_init();
+    local_draw_divider();
+    
+    local_print_text("Initialize the system?", 32, 40, 0);
+    local_print_text("  Yes", 48, 64, 1);
+    local_print_text("  No", 48, 80, 1);
+    local_print_text(">", 48, 64, 1); 
 }
 
 void draw_main_menu(void) {
-    video_clear_screens();
-    video_draw_divider();
-    video_print_text_ext("LUISH MENU", 32, 40, 0);
-    video_print_text_ext("  1. Credits", 48, 64, 1);
-    video_print_text_ext("  2. Back", 48, 80, 1);
-    video_print_text_ext("  3. Terminal Mode", 48, 96, 1);
-    video_print_text_ext(">", 48, 64, 1); 
+    local_video_init();
+    local_draw_divider();
+    
+    local_print_text("MAIN MENU", 32, 40, 0);
+    local_print_text("  1. Credits", 48, 64, 1);
+    local_print_text("  2. Back", 48, 80, 1);
+    local_print_text("  3. Terminal Mode", 48, 96, 1);
+    local_print_text(">", 48, 64, 1); 
 }
 
 void draw_terminal_screen(void) {
-    video_clear_screens();
-    video_draw_divider();
-    video_print_text_ext("luish://sys/tmode: ", 16, 40, 0);
-    video_print_text_ext("  Back", 48, 64, 1);
-    video_print_text_ext(">", 48, 64, 1);
+    local_video_init();
+    local_draw_divider();
+    
+    local_print_text("luish://sys/tmode: ", 16, 40, 0);
+    local_print_text("  Back", 48, 64, 1);
+    local_print_text(">", 48, 64, 1);
 }
 
 int main(void) {
-    video_init();
+    local_video_init();
     init_native_audio();
     trigger_audio_loop();
     wait_vblank();
@@ -95,11 +208,11 @@ int main(void) {
                 if (selected_option == 0) {
                     clear_bottom_character_slot(48, 64);
                     selected_option = 1;
-                    video_print_text_ext(">", 48, 80, 1);
+                    local_print_text(">", 48, 80, 1);
                 } else {
                     clear_bottom_character_slot(48, 80);
                     selected_option = 0;
-                    video_print_text_ext(">", 48, 64, 1);
+                    local_print_text(">", 48, 64, 1);
                 }
             }
             
@@ -109,9 +222,9 @@ int main(void) {
                     selected_option = 0; 
                     draw_main_menu();
                 } else {
-                    video_clear_screens();
-                    video_draw_divider();
-                    video_print_text_ext("Boot aborted.", 32, 64, 0);
+                    local_video_init();
+                    local_draw_divider();
+                    local_print_text("Boot aborted.", 32, 64, 0);
                     while(1) { wait_vblank(); }
                 }
             }
@@ -124,14 +237,14 @@ int main(void) {
                 } else {
                     selected_option = (selected_option - 1 + 3) % 3;
                 }
-                video_print_text_ext(">", 48, 64 + (selected_option * 16), 1);
+                local_print_text(">", 48, 64 + (selected_option * 16), 1);
             }
 
             if (pressed_keys & KEY_A) {
                 if (selected_option == 0) {
-                    video_clear_screens();
-                    video_draw_divider();
-                    video_print_text_ext("Made by Luiz Miguel.", 32, 64, 0);
+                    local_video_init();
+                    local_draw_divider();
+                    local_print_text("Made by Luiz Miguel.", 32, 64, 0);
                     while(1) { wait_vblank(); }
                 } 
                 else if (selected_option == 1) {
