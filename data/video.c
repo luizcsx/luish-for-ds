@@ -78,23 +78,42 @@ static const unsigned char basic_font[128][8] = {
 };
 
 void video_init(void) {
-    REG_POWERCNT = 0x820F;
+    powerOn(POWER_ALL_2D);
 
-    VRAM_A_CR = 0x80;
+    VRAM_A_CR = VRAM_ENABLE | VRAM_A_LCD;
 
-    VRAM_C_CR = 0x84;
+    VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
 
-    REG_DISPCNT = 0x00020000;
+    REG_DISPCNT = MODE_5_2D | DISPLAY_BG2_ACTIVE;
 
-    REG_DB_DISPCNT = 0x00000805;
+    REG_DISPCNT_SUB = MODE_5_2D | DISPLAY_BG2_ACTIVE;
+
+    BGCTRL[2]     = BG_BMP16_256x256 | BG_BMP_BASE(0);
+    BG_OFFSET[2].x = 0;
+    BG_OFFSET[2].y = 0;
+    BG2_XDX = 1 << 8;
+    BG2_XDY = 0;
+    BG2_YDX = 0;
+    BG2_YDY = 1 << 8;
+    BG2_CX  = 0;
+    BG2_CY  = 0;
+
+    BGCTRL_SUB[2]     = BG_BMP16_256x256 | BG_BMP_BASE(0);
+    BG_OFFSET_SUB[2].x = 0;
+    BG_OFFSET_SUB[2].y = 0;
+    BG2_D_XDX = 1 << 8;
+    BG2_D_XDY = 0;
+    BG2_D_YDX = 0;
+    BG2_D_YDY = 1 << 8;
+    BG2_D_CX  = 0;
+    BG2_D_CY  = 0;
 
     fill_screen(VRAM_TOP,    COLOR_BG);
     fill_screen(VRAM_BOTTOM, COLOR_BG);
 }
 
 void wait_vblank(void) {
-    while (REG_VCOUNT >= SCREEN_H);
-    while (REG_VCOUNT < SCREEN_H);
+    swiWaitForVBlank();
 }
 
 void draw_pixel(volatile unsigned short* vram, int x, int y, unsigned short color) {
