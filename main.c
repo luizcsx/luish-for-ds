@@ -12,68 +12,48 @@
 #define KEY_RIGHT       (1 << 4)
 #define KEY_A           (1 << 0)
 
-#define REG_RTC_CR      *(volatile unsigned short*)0x04000138
+typedef struct { int year, month, day, hour, minute, second; } RtcTime;
 
-static int bcd2dec(unsigned char bcd) {
-    return ((bcd >> 4) & 0x0F) * 10 + (bcd & 0x0F);
-}
+static int bcd2dec(unsigned char b) { return ((b >> 4) & 0x0F) * 10 + (b & 0x0F); }
 
-typedef struct {
-    int year, month, day;
-    int hour, minute, second;
-} RtcTime;
-
-static void rtc_delay(void) {
-    for (volatile int i = 0; i < 48; i++);
-}
+static void rtc_delay(void) { for (volatile int i = 0; i < 48; i++); }
 
 static void rtc_write_bit(unsigned char bit) {
-    volatile unsigned short *rtc = (volatile unsigned short*)0x04000138;
-    *rtc = (unsigned short)(0x0A | (bit ? 0x02 : 0x00));
+    volatile unsigned short *r = (volatile unsigned short*)0x04000138;
+    *r = (unsigned short)(0x0A | (bit ? 0x02 : 0x00));
     rtc_delay();
-    *rtc = (unsigned short)(0x0E | (bit ? 0x02 : 0x00));
+    *r = (unsigned short)(0x0E | (bit ? 0x02 : 0x00));
     rtc_delay();
 }
 
 static unsigned char rtc_read_byte(void) {
-    volatile unsigned short *rtc = (volatile unsigned short*)0x04000138;
+    volatile unsigned short *r = (volatile unsigned short*)0x04000138;
     unsigned char val = 0;
     for (int i = 0; i < 8; i++) {
-        *rtc = 0x04;
-        rtc_delay();
-        *rtc = 0x0C;
-        rtc_delay();
+        *r = 0x04; rtc_delay();
+        *r = 0x0C; rtc_delay();
         val >>= 1;
-        if (*rtc & 0x02) val |= 0x80;
+        if (*r & 0x02) val |= 0x80;
     }
     return val;
 }
 
 static void rtc_write_byte(unsigned char data) {
-    for (int i = 0; i < 8; i++) {
-        rtc_write_bit((data >> i) & 1);
-    }
+    for (int i = 0; i < 8; i++) rtc_write_bit((data >> i) & 1);
 }
 
 static void rtc_read(RtcTime *t) {
-    volatile unsigned short *rtc = (volatile unsigned short*)0x04000138;
-
-    *rtc = 0x06;
-    rtc_delay();
-
+    volatile unsigned short *r = (volatile unsigned short*)0x04000138;
+    *r = 0x06; rtc_delay();
     rtc_write_byte(0x65);
-
     unsigned char y  = rtc_read_byte();
     unsigned char mo = rtc_read_byte();
     unsigned char d  = rtc_read_byte();
-    rtc_read_byte();
+    rtc_read_byte(); /* dia da semana */
     unsigned char h  = rtc_read_byte();
     unsigned char mi = rtc_read_byte();
     unsigned char s  = rtc_read_byte();
-
-    *rtc = 0x02;
-    rtc_delay();
-
+    *r = 0x02; rtc_delay();
     t->year   = 2000 + bcd2dec(y);
     t->month  = bcd2dec(mo & 0x1F);
     t->day    = bcd2dec(d  & 0x3F);
@@ -88,21 +68,15 @@ static void fmt2d(char *dst, int n) {
 }
 
 static void fmt_datetime(char *buf, const RtcTime *t) {
-    fmt2d(buf + 0,  t->day);
-    buf[2]  = '/';
-    fmt2d(buf + 3,  t->month);
-    buf[5]  = '/';
+    fmt2d(buf + 0,  t->day);   buf[2]  = '/';
+    fmt2d(buf + 3,  t->month); buf[5]  = '/';
     buf[6]  = '0' + (t->year / 1000) % 10;
     buf[7]  = '0' + (t->year / 100)  % 10;
     buf[8]  = '0' + (t->year / 10)   % 10;
     buf[9]  = '0' + t->year          % 10;
-    buf[10] = ' ';
-    buf[11] = '|';
-    buf[12] = ' ';
-    fmt2d(buf + 13, t->hour);
-    buf[15] = ':';
-    fmt2d(buf + 16, t->minute);
-    buf[18] = '\0';
+    buf[10] = ' '; buf[11] = '|'; buf[12] = ' ';
+    fmt2d(buf + 13, t->hour);   buf[15] = ':';
+    fmt2d(buf + 16, t->minute); buf[18] = '\0';
 }
 
 static void init_audio(void) {
@@ -137,6 +111,24 @@ static void update_progress(int percent) {
     fill_rect(VRAM_TOP, 50, 102, 50 + w, 110, COLOR_SELECT);
 }
 
+#define PIN_Y       90
+#define PIN_X0      40    /* x do primeiro box */
+#define PIN_STEP    40    /* distância entre boxes */
+
+static void draw_pin_display(int ndigits) {
+    fill_rect(VRAM_TOP, PIN_X0 - 2, PIN_Y - 2,
+              PIN_X0 + 4 * PIN_STEP + 24, PIN_Y + 10, COLOR_BG);
+
+    for (int i = 0; i < 4; i++) {
+        int bx = PIN_X0 + i * PIN_STEP;
+        if (i < ndigits) {
+            print_text("[*]", bx, PIN_Y, VRAM_TOP, COLOR_SELECT);
+        } else {
+            print_text("[_]", bx, PIN_Y, VRAM_TOP, COLOR_TEXT);
+        }
+    }
+}
+
 static const char grid_chars[12][4] = {
     "1","2","3",
     "4","5","6",
@@ -144,7 +136,7 @@ static const char grid_chars[12][4] = {
     "-","0","OK"
 };
 static const int grid_x[12] = { 64,120,176, 64,120,176, 64,120,176, 64,120,176 };
-static const int grid_y[12] = { 60,60,60, 90,90,90, 120,120,120, 150,150,150 };
+static const int grid_y[12] = { 50,50,50, 80,80,80, 110,110,110, 140,140,140 };
 
 static void draw_pin_grid(int active) {
     for (int i = 0; i < 12; i++) {
@@ -168,7 +160,6 @@ int main(void) {
     for (int p = 0; p <= 100; p++) {
         wait_vblank();
         update_progress(p);
-
         if (p < 10) {
             pstr[0] = '0' + p; pstr[1] = '%'; pstr[2] = '\0';
         } else if (p < 100) {
@@ -178,7 +169,6 @@ int main(void) {
         } else {
             pstr[0]='1'; pstr[1]='0'; pstr[2]='0'; pstr[3]='%'; pstr[4]='\0';
         }
-
         fill_rect(VRAM_TOP, 112, 130, 152, 138, COLOR_BG);
         print_text(pstr, 112, 130, VRAM_TOP, COLOR_SELECT);
     }
@@ -187,18 +177,19 @@ int main(void) {
 
     video_init();
     draw_header_divider();
-    print_text("Security Authorization",   8,  8, VRAM_TOP,    COLOR_TEXT);
-    print_text("Enter System PIN code:",  48, 60, VRAM_TOP,    COLOR_TEXT);
-    print_text("[ _ ] [ _ ] [ _ ] [ _ ]",48, 90, VRAM_TOP,    COLOR_TEXT);
-    print_text("PIN Keypad",              80,  8, VRAM_BOTTOM,  COLOR_TEXT);
+    print_text("Security Authorization",  8,  8, VRAM_TOP,    COLOR_TEXT);
+    print_text("Enter System PIN code:", 32, 50, VRAM_TOP,    COLOR_TEXT);
+    print_text("PIN Keypad",             72,  8, VRAM_BOTTOM,  COLOR_TEXT);
 
+    /* PIN: 3550 */
+    const int correct[4] = { 3, 5, 5, 0 };
     int slot = 0, ndigits = 0;
-    int buf[4]           = {-1,-1,-1,-1};
-    const int correct[4] = { 1, 2, 3, 4};
+    int buf[4] = {-1,-1,-1,-1};
 
-    unsigned short prev_keys = REG_KEYINPUT;
+    draw_pin_display(0);
     draw_pin_grid(slot);
 
+    unsigned short prev_keys = REG_KEYINPUT;
     int authed = 0;
     while (!authed) {
         wait_vblank();
@@ -221,21 +212,19 @@ int main(void) {
                     beep(220);
                     ndigits = 0;
                     for (int i = 0; i < 4; i++) buf[i] = -1;
-                    fill_rect(VRAM_TOP, 48, 90, 232, 98, COLOR_BG);
-                    print_text("[ _ ] [ _ ] [ _ ] [ _ ]", 48, 90, VRAM_TOP, COLOR_TEXT);
+                    draw_pin_display(0);
                 }
             } else if (slot == 9) {
                 ndigits = 0;
                 for (int i = 0; i < 4; i++) buf[i] = -1;
-                fill_rect(VRAM_TOP, 48, 90, 232, 98, COLOR_BG);
-                print_text("[ _ ] [ _ ] [ _ ] [ _ ]", 48, 90, VRAM_TOP, COLOR_TEXT);
+                draw_pin_display(0);
             } else {
                 int val = (slot == 10) ? 0 : (slot + 1);
                 if (ndigits < 4) {
                     beep(600);
                     buf[ndigits] = val;
-                    print_text("*", 56 + ndigits * 40, 90, VRAM_TOP, COLOR_SELECT);
                     ndigits++;
+                    draw_pin_display(ndigits);
                 }
             }
         }
@@ -251,14 +240,14 @@ int main(void) {
     char dtbuf[20];
     fmt_datetime(dtbuf, &now);
 
-    print_text("Luish OS v1.0",  8,  8, VRAM_TOP, COLOR_TEXT);
+    print_text("LUISH",  8,  8, VRAM_TOP, COLOR_TEXT);
     print_text(dtbuf,           88,  8, VRAM_TOP, COLOR_SELECT);
-    print_text("System Active.", 48, 60, VRAM_TOP, COLOR_TEXT);
+    print_text("Welcome back.", 48, 60, VRAM_TOP, COLOR_TEXT);
 
-    print_text("Select an option:",      48,  36, VRAM_BOTTOM, COLOR_TEXT);
-    print_text("1. Hardware Specs",      24,  60, VRAM_BOTTOM, COLOR_SELECT);
-    print_text("2. Reset Firmware",      24,  90, VRAM_BOTTOM, COLOR_TEXT);
-    print_text("3. Exit Shell",          24, 120, VRAM_BOTTOM, COLOR_TEXT);
+    print_text("Select an option:", 48, 36, VRAM_BOTTOM, COLOR_TEXT);
+    print_text("1. Hardware Specs", 24, 60, VRAM_BOTTOM, COLOR_SELECT);
+    print_text("2. Reset Firmware", 24, 90, VRAM_BOTTOM, COLOR_TEXT);
+    print_text("3. Exit Shell",     24,120, VRAM_BOTTOM, COLOR_TEXT);
 
     int menu = 0;
     while (1) {
@@ -269,22 +258,16 @@ int main(void) {
 
         if (hits & KEY_DOWN) {
             menu++; if (menu > 2) menu = 0;
-            print_text("1. Hardware Specs", 24, 60, VRAM_BOTTOM,
-                       (menu==0)?COLOR_SELECT:COLOR_TEXT);
-            print_text("2. Reset Firmware", 24, 90, VRAM_BOTTOM,
-                       (menu==1)?COLOR_SELECT:COLOR_TEXT);
-            print_text("3. Exit Shell",     24,120, VRAM_BOTTOM,
-                       (menu==2)?COLOR_SELECT:COLOR_TEXT);
+            print_text("1. Hardware Specs", 24, 60, VRAM_BOTTOM, (menu==0)?COLOR_SELECT:COLOR_TEXT);
+            print_text("2. Reset Firmware", 24, 90, VRAM_BOTTOM, (menu==1)?COLOR_SELECT:COLOR_TEXT);
+            print_text("3. Exit Shell",     24,120, VRAM_BOTTOM, (menu==2)?COLOR_SELECT:COLOR_TEXT);
             beep(500);
         }
         if (hits & KEY_UP) {
             menu--; if (menu < 0) menu = 2;
-            print_text("1. Hardware Specs", 24, 60, VRAM_BOTTOM,
-                       (menu==0)?COLOR_SELECT:COLOR_TEXT);
-            print_text("2. Reset Firmware", 24, 90, VRAM_BOTTOM,
-                       (menu==1)?COLOR_SELECT:COLOR_TEXT);
-            print_text("3. Exit Shell",     24,120, VRAM_BOTTOM,
-                       (menu==2)?COLOR_SELECT:COLOR_TEXT);
+            print_text("1. Hardware Specs", 24, 60, VRAM_BOTTOM, (menu==0)?COLOR_SELECT:COLOR_TEXT);
+            print_text("2. Reset Firmware", 24, 90, VRAM_BOTTOM, (menu==1)?COLOR_SELECT:COLOR_TEXT);
+            print_text("3. Exit Shell",     24,120, VRAM_BOTTOM, (menu==2)?COLOR_SELECT:COLOR_TEXT);
             beep(500);
         }
 
@@ -292,31 +275,26 @@ int main(void) {
             if (menu == 0) {
                 video_init();
                 draw_header_divider();
-                print_text("Hardware Info",           8,   8, VRAM_TOP,    COLOR_TEXT);
-
-                print_text("Platform: Nintendo DS",  16,  36, VRAM_TOP,    COLOR_TEXT);
-                print_text("ARM9: 67 MHz ARM946E-S", 16,  52, VRAM_TOP,    COLOR_TEXT);
-                print_text("ARM7: 33 MHz ARM7TDMI",  16,  68, VRAM_TOP,    COLOR_TEXT);
-                print_text("RAM:  4MB Main + 256KB", 16,  84, VRAM_TOP,    COLOR_TEXT);
-                print_text("VRAM: 656KB (A-I)",      16, 100, VRAM_TOP,    COLOR_TEXT);
-                print_text("BIOS: 4KB ARM9+16KB ARM7",16, 116,VRAM_TOP,    COLOR_TEXT);
-
-                print_text("Hardware Detail",        16,   8, VRAM_BOTTOM, COLOR_TEXT);
-                print_text("Display: 2x 256x192 TFT",16,  36, VRAM_BOTTOM, COLOR_TEXT);
-                print_text("WiFi: IEEE 802.11b",     16,  52, VRAM_BOTTOM, COLOR_TEXT);
-                print_text("SPI: RTC + Firmware",    16,  68, VRAM_BOTTOM, COLOR_TEXT);
-                print_text("DMA: 4 channels (ARM9)", 16,  84, VRAM_BOTTOM, COLOR_TEXT);
-                print_text("VRAM MAP: DIRECT LCD",   16, 100, VRAM_BOTTOM, COLOR_TEXT);
-                print_text("STATUS: OPERATIONAL",    16, 116, VRAM_BOTTOM, COLOR_SELECT);
-
+                print_text("Hardware Info",            8,   8, VRAM_TOP,    COLOR_TEXT);
+                print_text("Platform: Nintendo DS",   16,  36, VRAM_TOP,    COLOR_TEXT);
+                print_text("ARM9: 67MHz ARM946E-S",   16,  52, VRAM_TOP,    COLOR_TEXT);
+                print_text("ARM7: 33MHz ARM7TDMI",    16,  68, VRAM_TOP,    COLOR_TEXT);
+                print_text("RAM:  4MB + 256KB",       16,  84, VRAM_TOP,    COLOR_TEXT);
+                print_text("VRAM: 656KB (A-I)",       16, 100, VRAM_TOP,    COLOR_TEXT);
+                print_text("Hardware Detail",         16,   8, VRAM_BOTTOM, COLOR_TEXT);
+                print_text("Display: 2x256x192 TFT",  16,  36, VRAM_BOTTOM, COLOR_TEXT);
+                print_text("WiFi: IEEE 802.11b",      16,  52, VRAM_BOTTOM, COLOR_TEXT);
+                print_text("SPI: RTC + Firmware",     16,  68, VRAM_BOTTOM, COLOR_TEXT);
+                print_text("DMA: 4ch ARM9 + 2ch ARM7",16,  84, VRAM_BOTTOM, COLOR_TEXT);
+                print_text("VRAM: DIRECT LCD MODE",   16, 100, VRAM_BOTTOM, COLOR_TEXT);
+                print_text("STATUS: OPERATIONAL",     16, 116, VRAM_BOTTOM, COLOR_SELECT);
                 while (1) { wait_vblank(); }
-
             } else {
                 video_init();
                 draw_header_divider();
                 print_text("System Halt",      8,  8, VRAM_TOP,    COLOR_TEXT);
                 print_text("Operation halted.",48, 80, VRAM_TOP,    COLOR_TEXT);
-                print_text("Power off the DS.",48, 96, VRAM_BOTTOM, COLOR_TEXT);
+                print_text("Power off the DS.",24, 80, VRAM_BOTTOM, COLOR_TEXT);
                 while (1) { wait_vblank(); }
             }
         }
