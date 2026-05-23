@@ -12,13 +12,13 @@
 #define REG_CH0_CNT     *(volatile unsigned int*)0x04000400
 #define REG_CH0_TMR     *(volatile unsigned short*)0x04000408
 
-#define VRAM_TOP        ((volatile unsigned short*)0x06800000)
-#define VRAM_BOTTOM     ((volatile unsigned short*)0x06600000)
+#define VRAM_TOP        ((volatile unsigned short*)0x06800000) // Bank A (Top Screen)
+#define VRAM_BOTTOM     ((volatile unsigned short*)0x06600000) // Bank D (Bottom Screen)
 
-#define COLOR_BG        0x4200
-#define COLOR_TEXT      0x7FFF
-#define COLOR_SELECT    0x03E0
-#define COLOR_BLACK     0x0000
+#define COLOR_BG        0x4200 // Deep Factory Navy Blue
+#define COLOR_TEXT      0x7FFF // Crisp White
+#define COLOR_SELECT    0x03E0 // Selection Highlight Yellow
+#define COLOR_BLACK     0x0000 // Solid Black
 
 #define KEY_UP          (1 << 6)
 #define KEY_DOWN        (1 << 7)
@@ -39,7 +39,6 @@ const unsigned char basic_font[128][8] = {
     ['%'] = {0x62, 0x66, 0x0C, 0x18, 0x30, 0x66, 0x46, 0x00}, 
     ['['] = {0x1E, 0x18, 0x18, 0x18, 0x18, 0x18, 0x1E, 0x00},
     [']'] = {0x78, 0x18, 0x18, 0x18, 0x18, 0x18, 0x78, 0x00},
-
     ['0'] = {0x3C, 0x66, 0x6E, 0x76, 0x66, 0x3C, 0x00, 0x00},
     ['1'] = {0x18, 0x38, 0x18, 0x18, 0x18, 0x7E, 0x00, 0x00},
     ['2'] = {0x3C, 0x66, 0x0C, 0x18, 0x30, 0x7E, 0x00, 0x00},
@@ -50,7 +49,6 @@ const unsigned char basic_font[128][8] = {
     ['7'] = {0x7E, 0x06, 0x0C, 0x18, 0x30, 0x30, 0x00, 0x00},
     ['8'] = {0x3C, 0x66, 0x3C, 0x66, 0x66, 0x3C, 0x00, 0x00},
     ['9'] = {0x3C, 0x66, 0x3E, 0x06, 0x0C, 0x38, 0x00, 0x00},
-
     ['A'] = {0x3C, 0x66, 0x66, 0x7E, 0x66, 0x66, 0x66, 0x00},
     ['B'] = {0x7C, 0x66, 0x7C, 0x66, 0x66, 0x7C, 0x00, 0x00},
     ['C'] = {0x3C, 0x66, 0x60, 0x60, 0x66, 0x3C, 0x00, 0x00},
@@ -77,7 +75,6 @@ const unsigned char basic_font[128][8] = {
     ['X'] = {0x66, 0x66, 0x3C, 0x18, 0x3C, 0x66, 0x00, 0x00},
     ['Y'] = {0x66, 0x66, 0x3C, 0x18, 0x18, 0x18, 0x00, 0x00},
     ['Z'] = {0x7E, 0x0C, 0x18, 0x30, 0x60, 0x7E, 0x00, 0x00},
-
     ['a'] = {0x00, 0x3E, 0x06, 0x3E, 0x66, 0x3B, 0x00, 0x00},
     ['b'] = {0x60, 0x60, 0x7C, 0x66, 0x66, 0x7C, 0x00, 0x00},
     ['c'] = {0x00, 0x3C, 0x66, 0x60, 0x66, 0x3C, 0x00, 0x00},
@@ -160,13 +157,10 @@ void draw_progress_bar_frame(void) {
     }
 }
 
-void update_progress_bar_fill(int percentage) {
-    int max_width = 158; 
-    int current_width = (percentage * max_width) / 100;
-    
+void update_progress_bar_fill(int current_width) {
     for (int y = 102; y < 111; y++) {
         for (int x = 50; x < 50 + current_width; x++) {
-            VRAM_TOP[y * 256 + x] = COLOR_SELECT;
+            VRAM_TOP[y * 256 + x] = COLOR_SELECT; 
         }
     }
 }
@@ -182,10 +176,16 @@ void init_hardware_audio(void) {
 }
 
 void trigger_beep_sound(int frequency) {
-    REG_CH0_TMR = (unsigned short)(-16777216 / (frequency * 8)); 
-    REG_CH0_CNT = 0x877F0000;
-    for(int i=0; i<10; i++) wait_vblank();
-    REG_CH0_CNT = 0x00000000;
+    unsigned short timer_val = 51160;
+    if (frequency == 600)  timer_val = 55212;
+    if (frequency == 880)  timer_val = 59180;
+    if (frequency == 1200) timer_val = 61212;
+    if (frequency == 220)  timer_val = 35160;
+
+    REG_CH0_TMR = timer_val; 
+    REG_CH0_CNT = 0x877F0000;  
+    for(int i = 0; i < 10; i++) wait_vblank(); 
+    REG_CH0_CNT = 0x00000000;  
 }
 
 const char grid_characters[12][4] = {
@@ -230,16 +230,23 @@ int main(void) {
     char progress_string[5] = "0%";
     for (int progress = 0; progress <= 100; progress++) {
         wait_vblank();
-        if (progress % 2 == 0) {
-            update_progress_bar_fill(progress);
+        if ((progress & 1) == 0) {
+            int current_width = (progress * 101) >> 6; 
+            update_progress_bar_fill(current_width);
             
             if (progress < 10) {
                 progress_string[0] = '0' + progress;
                 progress_string[1] = '%';
                 progress_string[2] = '\0';
             } else if (progress < 100) {
-                progress_string[0] = '0' + (progress / 10);
-                progress_string[1] = '0' + (progress % 10);
+                int tens = 0;
+                int units = progress;
+                while (units >= 10) {
+                    units -= 10;
+                    tens++;
+                }
+                progress_string[0] = '0' + tens;
+                progress_string[1] = '0' + units;
                 progress_string[2] = '%';
                 progress_string[3] = '\0';
             } else {
@@ -253,7 +260,7 @@ int main(void) {
         }
     }
     
-    trigger_beep_sound(880);
+    trigger_beep_sound(880); 
     
     system_video_init();
     draw_horizontal_divider();
@@ -264,7 +271,7 @@ int main(void) {
     int active_grid_slot = 0;
     int entered_digits_count = 0;
     int input_pin_buffer[4] = {-1, -1, -1, -1};
-    const int actual_system_pin[4] = {1, 2, 3, 4};
+    const int actual_system_pin[4] = {1, 2, 3, 4}; 
     
     unsigned short previous_keys_state = 0xFFFF;
     draw_security_pin_grid(active_grid_slot);
@@ -277,11 +284,15 @@ int main(void) {
         previous_keys_state = current_keys_state;
         
         if (registered_presses & KEY_RIGHT) {
-            if (active_grid_slot % 3 < 2) active_grid_slot++;
+            int current_col = active_grid_slot;
+            while (current_col >= 3) current_col -= 3;
+            if (current_col < 2) active_grid_slot++;
             draw_security_pin_grid(active_grid_slot);
         }
         if (registered_presses & KEY_LEFT) {
-            if (active_grid_slot % 3 > 0) active_grid_slot--;
+            int current_col = active_grid_slot;
+            while (current_col >= 3) current_col -= 3;
+            if (current_col > 0) active_grid_slot--;
             draw_security_pin_grid(active_grid_slot);
         }
         if (registered_presses & KEY_DOWN) {
@@ -301,9 +312,9 @@ int main(void) {
                     input_pin_buffer[2] == actual_system_pin[2] &&
                     input_pin_buffer[3] == actual_system_pin[3]) {
                     
-                    system_authenticated = 1;
+                    system_authenticated = 1; 
                 } else {
-                    trigger_beep_sound(220);
+                    trigger_beep_sound(220); 
                     entered_digits_count = 0;
                     system_print_text("[ _ ] [ _ ] [ _ ] [ _ ]", 48, 90, 0, COLOR_TEXT);
                 }
@@ -324,12 +335,12 @@ int main(void) {
         }
     }
     
-    trigger_beep_sound(1200);
+    trigger_beep_sound(1200); 
     system_video_init();
     draw_horizontal_divider();
     
     system_print_text("Luish OS v1.0", 8, 8, 0, COLOR_TEXT);
-    system_print_text("22/05/2026 - 23:22", 104, 8, 0, COLOR_SELECT);
+    system_print_text("22/05/2026 - 23:33", 104, 8, 0, COLOR_SELECT); 
     
     system_print_text("System Active.", 48, 60, 0, COLOR_TEXT);
     
@@ -345,14 +356,18 @@ int main(void) {
         previous_keys_state = current_keys_state;
         
         if (registered_presses & KEY_DOWN) {
-            system_print_text("1. Hardware Specifications", 24, 60, 1, (active_menu_index == 2) ? COLOR_SELECT : COLOR_TEXT);
-            system_print_text("2. Reset Firmware Settings", 24, 90, 1, (active_menu_index == 0) ? COLOR_SELECT : COLOR_TEXT);
-            system_print_text("3. Exit Console Shell", 24, 120, 1, (active_menu_index == 1) ? COLOR_SELECT : COLOR_TEXT);
-            active_menu_index = (active_menu_index + 1) % 3;
+            active_menu_index++;
+            if (active_menu_index > 2) active_menu_index = 0;
+            
+            system_print_text("1. Hardware Specifications", 24, 60, 1, (active_menu_index == 0) ? COLOR_SELECT : COLOR_TEXT);
+            system_print_text("2. Reset Firmware Settings", 24, 90, 1, (active_menu_index == 1) ? COLOR_SELECT : COLOR_TEXT);
+            system_print_text("3. Exit Console Shell", 24, 120, 1, (active_menu_index == 2) ? COLOR_SELECT : COLOR_TEXT);
             trigger_beep_sound(500);
         }
         if (registered_presses & KEY_UP) {
-            active_menu_index = (active_menu_index - 1 + 3) % 3;
+            active_menu_index--;
+            if (active_menu_index < 0) active_menu_index = 2;
+            
             system_print_text("1. Hardware Specifications", 24, 60, 1, (active_menu_index == 0) ? COLOR_SELECT : COLOR_TEXT);
             system_print_text("2. Reset Firmware Settings", 24, 90, 1, (active_menu_index == 1) ? COLOR_SELECT : COLOR_TEXT);
             system_print_text("3. Exit Console Shell", 24, 120, 1, (active_menu_index == 2) ? COLOR_SELECT : COLOR_TEXT);
@@ -360,7 +375,7 @@ int main(void) {
         }
         
         if (registered_presses & KEY_A) {
-            if (active_menu_index == 0) {
+            if (active_menu_index == 0) { 
                 system_video_init();
                 draw_horizontal_divider();
                 system_print_text("Hardware Diagnostics", 8, 8, 0, COLOR_TEXT);
@@ -374,7 +389,7 @@ int main(void) {
             else {
                 system_video_init();
                 draw_horizontal_divider();
-                system_print_text("Operation Halted.", 48, 80, 0, COLOR_TEXT);
+                system_print_text("Operation halted.", 48, 80, 0, COLOR_TEXT);
                 while(1) { wait_vblank(); }
             }
         }
