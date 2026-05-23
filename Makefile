@@ -17,7 +17,7 @@ all: main.nds
 
 main.nds: main.elf arm7.bin
 	$(OBJCOPY) -O binary main.elf arm9.bin
-	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -g LUSH -t "Luish for Nintendo DS"
+	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -g LUSH 01 "Luish for Nintendo DS"
 	rm -f arm9.bin arm7.bin arm7.elf arm7.o
 
 arm7.bin: arm7.c
