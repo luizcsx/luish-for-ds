@@ -1,7 +1,15 @@
 #include "video.h"
 
-#define REG_KEYINPUT  *(volatile unsigned short*)0x04000130
-#define REG_VCOUNT    *(volatile unsigned short*)0x04000006
+#define REG_KEYINPUT      *(volatile unsigned short*)0x04000130
+#define REG_VCOUNT        *(volatile unsigned short*)0x04000006
+
+#define REG_SOUNDCNT      *(volatile unsigned short*)0x04000500
+#define REG_SOUNDBIAS     *(volatile unsigned short*)0x04000504
+#define REG_CH0_CNT       *(volatile unsigned int*)0x04000400
+#define REG_CH0_SAD       *(volatile unsigned int*)0x04000404
+#define REG_CH0_TMR       *(volatile unsigned short*)0x04000408
+#define REG_CH0_PNT       *(volatile unsigned short*)0x0400040A
+#define REG_CH0_LEN       *(volatile unsigned int*)0x0400040C
 
 #define KEY_UP     (1 << 6)
 #define KEY_DOWN   (1 << 7)
@@ -12,6 +20,19 @@
 void wait_vblank(void) {
     while (REG_VCOUNT >= 192);
     while (REG_VCOUNT < 192);
+}
+
+void init_hardware_audio(void) {
+    REG_SOUNDCNT = 0x807F;
+    REG_SOUNDBIAS = 0x0200;
+}
+
+void play_audio_stream(void) {
+    REG_CH0_SAD = 0x02000000; 
+    REG_CH0_TMR = (unsigned short)(-16777216 / 44100);
+    REG_CH0_PNT = 0;
+    REG_CH0_LEN = 0x4000;
+    REG_CH0_CNT = 0x847F0000;
 }
 
 void clear_character_slot(int x, int y) {
@@ -37,7 +58,7 @@ void draw_welcome_screen(void) {
 void draw_main_menu(void) {
     video_clear_screens();
     video_draw_divider();
-    video_print_text("LUISH MENU", 32, 40);
+    video_print_text("Luish", 32, 40);
     video_print_text("  1. Credits", 48, 64);
     video_print_text("  2. Back", 48, 80);
     video_print_text(">", 48, 64); 
@@ -45,10 +66,12 @@ void draw_main_menu(void) {
 
 int main(void) {
     video_init();
+    init_hardware_audio(); 
+    play_audio_stream();   
     wait_vblank();
     
-    int current_screen = 0;
-    int selected_option = 0;
+    int current_screen = 0;       
+    int selected_option = 0;      
     unsigned short last_keys = 0xFFFF;
 
     draw_welcome_screen();
