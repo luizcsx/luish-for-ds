@@ -25,20 +25,34 @@ void apagar_caractere(int x, int y) {
     }
 }
 
-int main(void) {
-    video_init();
-    wait_vblank();
-    
+void desenhar_tela_inicial(void) {
     video_clear_screens();
     video_draw_divider();
     video_print_text("Initialize the system?", 32, 40);
     video_print_text("  Yes", 48, 64);
     video_print_text("  No", 48, 80);
+    video_print_text(">", 48, 64);
+}
 
-    int selected_index = 0; 
+void desenhar_menu_principal(void) {
+    video_clear_screens();
+    video_draw_divider();
+    video_print_text("Luish", 32, 40);
+    video_print_text("  1. Creditos", 48, 64);
+    video_print_text("  2. Voltar", 48, 80);
+    video_print_text(">", 48, 64);
+}
+
+
+int main(void) {
+    video_init();
+    wait_vblank();
+    
+    int tela_atual = 0;
+    int selected_index = 0;
     unsigned short last_keys = 0xFFFF;
 
-    video_print_text(">", 48, 64);
+    desenhar_tela_inicial();
 
     while (1) {
         wait_vblank();
@@ -47,27 +61,59 @@ int main(void) {
         unsigned short pressed = (last_keys ^ current_keys) & (~current_keys);
         last_keys = current_keys;
 
-        if (pressed & (KEY_DOWN | KEY_UP)) {
-            if (selected_index == 0) {
-                apagar_caractere(48, 64);
-                selected_index = 1;
-                video_print_text(">", 48, 80);
-            } else {
-                apagar_caractere(48, 80);
-                selected_index = 0;
-                video_print_text(">", 48, 64);
+        if (tela_atual == 0) {
+            if (pressed & (KEY_DOWN | KEY_UP)) {
+                if (selected_index == 0) {
+                    apagar_caractere(48, 64);
+                    selected_index = 1;
+                    video_print_text(">", 48, 80);
+                } else {
+                    apagar_caractere(48, 80);
+                    selected_index = 0;
+                    video_print_text(">", 48, 64);
+                }
+            }
+            
+            if (pressed & KEY_A) {
+                if (selected_index == 0) {
+                    tela_atual = 1;
+                    selected_index = 0;
+                    desenhar_menu_principal();
+                } else {
+                    video_clear_screens();
+                    video_draw_divider();
+                    video_print_text("Boot aborted.", 32, 64);
+                    while(1) { wait_vblank(); }
+                }
             }
         }
-        
-        if (pressed & KEY_A) {
-            video_clear_screens();
-            video_draw_divider();
-            if (selected_index == 0) {
-                video_print_text("Booting Luish system...", 32, 64);
-            } else {
-                video_print_text("Boot aborted.", 32, 64);
+            
+        else if (tela_atual == 1) {
+            if (pressed & (KEY_DOWN | KEY_UP)) {
+                if (selected_index == 0) {
+                    apagar_caractere(48, 64);
+                    selected_index = 1;
+                    video_print_text(">", 48, 80);
+                } else {
+                    apagar_caractere(48, 80);
+                    selected_index = 0;
+                    video_print_text(">", 48, 64);
+                }
             }
-            while(1) { wait_vblank(); }
+
+            if (pressed & KEY_A) {
+                if (selected_index == 0) {
+                    video_clear_screens();
+                    video_draw_divider();
+                    video_print_text("Made by Luiz Miguel.", 32, 64);
+                    while(1) { wait_vblank(); }
+                } 
+                else if (selected_index == 1) {
+                    tela_atual = 0;
+                    selected_index = 0;
+                    desenhar_tela_inicial();
+                }
+            }
         }
     }
 
