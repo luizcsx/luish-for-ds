@@ -153,49 +153,58 @@ int main(void) {
     }
 beep(880);
 
-    video_init();
+video_init();
     draw_divider();
+    
     print_text("Security Authorization",  8,  8, VRAM_TOP,    COLOR_TEXT);
     print_text("Enter System PIN code:", 32, 55, VRAM_TOP,    COLOR_BLACK);
     print_text("PIN Keypad",             80,  8, VRAM_BOTTOM,  COLOR_TEXT);
 
     const int correct[4] = {3, 5, 5, 0};
-    int buf[4] = {-1,-1,-1,-1};
+    int buf[4] = {-1, -1, -1, -1};
     int slot = 0, ndigits = 0;
 
+    wait_vblank();
     draw_pin_display(0);
     draw_grid(slot);
 
     unsigned short prev_keys = REG_KEYINPUT;
     int authed = 0;
-    
+
     while (!authed) {
         wait_vblank();
+        
         unsigned short cur  = REG_KEYINPUT;
         unsigned short hits = (prev_keys ^ cur) & ~cur;
         prev_keys = cur;
 
-        if (hits & KEY_RIGHT) { if (slot%3 < 2)  slot++;  draw_grid(slot); }
-        if (hits & KEY_LEFT)  { if (slot%3 > 0)  slot--;  draw_grid(slot); }
-        if (hits & KEY_DOWN)  { if (slot < 9)    slot+=3; draw_grid(slot); }
-        if (hits & KEY_UP)    { if (slot >= 3)   slot-=3; draw_grid(slot); }
+        int mudou_posicao = 0;
+
+        if (hits & KEY_RIGHT) { if (slot % 3 < 2) { slot++;  mudou_posicao = 1; } }
+        if (hits & KEY_LEFT)  { if (slot % 3 > 0) { slot--;  mudou_posicao = 1; } }
+        if (hits & KEY_DOWN)  { if (slot < 9)     { slot+=3; mudou_posicao = 1; } }
+        if (hits & KEY_UP)    { if (slot >= 3)    { slot-=3; mudou_posicao = 1; } }
+
+        if (mudou_posicao) {
+            draw_grid(slot);
+        }
 
         if (hits & KEY_A) {
             if (slot == 11) {
                 if (ndigits == 4 &&
-                    buf[0]==correct[0] && buf[1]==correct[1] &&
-                    buf[2]==correct[2] && buf[3]==correct[3]) {
+                    buf[0] == correct[0] && buf[1] == correct[1] &&
+                    buf[2] == correct[2] && buf[3] == correct[3]) {
                     authed = 1;
                 } else {
                     beep(220);
                     ndigits = 0;
-                    for (int i=0;i<4;i++) buf[i]=-1;
+                    for (int i = 0; i < 4; i++) buf[i] = -1;
                     draw_pin_display(0);
                     draw_grid(slot);
                 }
             } else if (slot == 9) {
                 ndigits = 0;
-                for (int i=0;i<4;i++) buf[i]=-1;
+                for (int i = 0; i < 4; i++) buf[i] = -1;
                 draw_pin_display(0);
                 draw_grid(slot);
             } else {
@@ -209,6 +218,7 @@ beep(880);
             }
         }
     }
+    
     beep(1200);
     
     fill_screen(VRAM_TOP,    COLOR_BG);
