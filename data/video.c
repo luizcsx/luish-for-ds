@@ -4,10 +4,10 @@
 #define REG_DISPCNT     *(volatile unsigned int*)0x04000000
 #define VRAM_A_CR       *(volatile unsigned int*)0x04000240
 #define REG_DB_DISPCNT  *(volatile unsigned int*)0x04001000
-#define VRAM_C_CR       *(volatile unsigned int*)0x04000242
+#define VRAM_D_CR       *(volatile unsigned int*)0x04000243
 
-#define VRAM_TOP        ((volatile unsigned short*)0x06800000)
-#define VRAM_BOTTOM     ((volatile unsigned short*)0x06200000)
+#define VRAM_TOP        ((volatile unsigned short*)0x06800000) // VRAM A (Main)
+#define VRAM_BOTTOM     ((volatile unsigned short*)0x06600000) // VRAM D (Sub)
 
 const unsigned char basic_font[128][8] = {
     [' '] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
@@ -87,7 +87,7 @@ void video_init(void) {
     VRAM_A_CR = 0x80; 
     REG_DISPCNT = 0x00020400; 
     
-    VRAM_C_CR = 0x82; 
+    VRAM_D_CR = 0x80; 
     REG_DB_DISPCNT = 0x00020400; 
     
     video_clear_screens(); 
