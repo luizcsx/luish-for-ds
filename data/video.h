@@ -9,5 +9,6 @@ void video_init(void);
 void video_clear_screens(void);
 void video_draw_divider(void);
 void video_print_text(const char* text, int x, int y);
+void video_print_text_ext(const char* text, int x, int y, int target_screen);
 
 #endif
