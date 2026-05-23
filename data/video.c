@@ -84,12 +84,13 @@ void fill_screen(volatile unsigned short* vram, unsigned short color) {
 }
 
 void video_init(void) {
-    REG_POWERCNT   = 0x820F;
-    VRAM_A_CR      = 0x80;
-    VRAM_C_CR      = 0x84;
+    REG_POWERCNT   = 0x820F;    
     
-    REG_DISPCNT    = 0x00020000;
-    REG_DB_DISPCNT = 0x00020000;
+    VRAM_A_CR      = 0x80;
+    VRAM_C_CR      = 0x80;
+    
+    REG_DISPCNT    = 0x00020000; 
+    REG_DB_DISPCNT = 0x00020000; 
     
     fill_screen(VRAM_TOP,    COLOR_BG);
     fill_screen(VRAM_BOTTOM, COLOR_BG);
