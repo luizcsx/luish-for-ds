@@ -107,9 +107,9 @@ static void draw_pin_display(int ndigits) {
     for (int i = 0; i < 4; i++) {
         int bx = PIN_X0 + i * PIN_STEP;
         if (i < ndigits)
-            print_text("[*]", bx, PIN_Y, VRAM_TOP, COLOR_SELECT);
+            print_text("[*]", bx, PIN_Y, VRAM_TOP, COLOR_BLACK);
         else
-            print_text("[_]", bx, PIN_Y, VRAM_TOP, COLOR_TEXT);
+            print_text("[_]", bx, PIN_Y, VRAM_TOP, COLOR_BLACK);
     }
 }
 
@@ -156,7 +156,7 @@ int main(void) {
     video_init();
     draw_divider();
     print_text("Security Authorization",  8,  8, VRAM_TOP,    COLOR_TEXT);
-    print_text("Enter System PIN code:", 32, 55, VRAM_TOP,    COLOR_TEXT);
+    print_text("Enter System PIN code:", 32, 55, VRAM_TOP,    COLOR_BLACK);
     print_text("PIN Keypad",             80,  8, VRAM_BOTTOM,  COLOR_TEXT);
 
     const int correct[4] = {3, 5, 5, 0};
