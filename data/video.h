@@ -20,8 +20,8 @@
 
 #define COLOR_BG        0x4200u
 #define COLOR_TEXT      0x7FFFu
-#define COLOR_SELECT    0x7FE0u 
-#define COLOR_BLACK     0x0000u 
+#define COLOR_SELECT    0x7FE0u
+#define COLOR_BLACK     0x0000u
 
 void video_init(void);
 void wait_vblank(void);
