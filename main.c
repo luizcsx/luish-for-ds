@@ -120,7 +120,6 @@ int main(void) {
 
         if (hits & KEY_A) {
             if (slot == 11) {
-                /* OK */
                 if (ndigits == 4 &&
                     buf[0]==correct[0] && buf[1]==correct[1] &&
                     buf[2]==correct[2] && buf[3]==correct[3]) {
@@ -154,7 +153,7 @@ int main(void) {
     draw_header_divider();
 
     print_text("Luish OS v1.0",      8,   8, VRAM_TOP, COLOR_TEXT);
-    print_text("22/05/2026 - 23:33",104,   8, VRAM_TOP, COLOR_SELECT);
+    print_text("23/05/2026 - 00:00",104,   8, VRAM_TOP, COLOR_SELECT);
     print_text("System Active.",     48,  60, VRAM_TOP, COLOR_TEXT);
 
     print_text("1. Hardware Specifications", 24,  60, VRAM_BOTTOM, COLOR_SELECT);
