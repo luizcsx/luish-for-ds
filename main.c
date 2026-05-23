@@ -151,7 +151,7 @@ int main(void) {
         fill_rect(VRAM_TOP, 112, 130, 152, 138, COLOR_BG);
         print_text(pstr, 112, 130, VRAM_TOP, COLOR_SELECT);
     }
-    beep(880);
+beep(880);
 
     video_init();
     draw_divider();
@@ -167,8 +167,8 @@ int main(void) {
     draw_grid(slot);
 
     unsigned short prev_keys = REG_KEYINPUT;
-
     int authed = 0;
+    
     while (!authed) {
         wait_vblank();
         unsigned short cur  = REG_KEYINPUT;
@@ -191,24 +191,28 @@ int main(void) {
                     ndigits = 0;
                     for (int i=0;i<4;i++) buf[i]=-1;
                     draw_pin_display(0);
+                    draw_grid(slot);
                 }
             } else if (slot == 9) {
                 ndigits = 0;
                 for (int i=0;i<4;i++) buf[i]=-1;
                 draw_pin_display(0);
+                draw_grid(slot);
             } else {
                 int val = (slot == 10) ? 0 : (slot + 1);
                 if (ndigits < 4) {
                     beep(600);
                     buf[ndigits++] = val;
                     draw_pin_display(ndigits);
+                    draw_grid(slot);
                 }
             }
         }
     }
     beep(1200);
-
-    video_init();
+    
+    fill_screen(VRAM_TOP,    COLOR_BG);
+    fill_screen(VRAM_BOTTOM, COLOR_BG);
     draw_divider();
 
     RtcTime now;
