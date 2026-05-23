@@ -85,10 +85,9 @@ void fill_screen(volatile unsigned short* vram, unsigned short color) {
 
 void video_init(void) {
     REG_POWERCNT   = 0x820F;    
-
-    VRAM_A_CR      = 0x80;      
     
-    VRAM_C_CR      = 0x84;      
+    VRAM_A_CR      = 0x80;
+    VRAM_C_CR      = 0x84;
     
     REG_DISPCNT    = 0x00020000; 
     REG_DB_DISPCNT = 0x00020000; 
@@ -103,15 +102,29 @@ void wait_vblank(void) {
 }
 
 void draw_pixel(volatile unsigned short* vram, int x, int y, unsigned short color) {
-    if ((unsigned)x < SCREEN_W && (unsigned)y < SCREEN_H)
-        vram[y * SCREEN_W + x] = color;
+    if ((unsigned)x < SCREEN_W && (unsigned)y < SCREEN_H) {
+        if (vram == VRAM_BOTTOM) {
+            volatile unsigned int* vram32 = (volatile unsigned int*)((unsigned int)vram + ((y * SCREEN_W + (x & ~1)) * 2));
+            unsigned int current_pixels = *vram32;
+            
+            if (x & 1) {
+                *vram32 = (current_pixels & 0x0000FFFF) | (color << 16);
+            } else {
+
+                *vram32 = (current_pixels & 0xFFFF0000) | color;
+            }
+        } else {
+            vram[y * SCREEN_W + x] = color;
+        }
+    }
 }
 
-void draw_hline(volatile unsigned short* vram, int y, unsigned short color) {
-    if ((unsigned)y < SCREEN_H) {
-        volatile unsigned short* row = vram + y * SCREEN_W;
-        for (int x = 0; x < SCREEN_W; x++)
-            row[x] = color;
+void fill_screen(volatile unsigned short* vram, unsigned short color) {
+    unsigned int color32 = (color << 16) | color;
+    volatile unsigned int* ptr = (volatile unsigned int*)vram;
+    
+    for (int i = 0; i < (SCREEN_PIXELS / 2); i++) {
+        ptr[i] = color32;
     }
 }
 
