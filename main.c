@@ -264,9 +264,12 @@ int main(void) {
     
     system_video_init();
     draw_horizontal_divider();
+    
     system_print_text("Security Authorization", 8, 8, 0, COLOR_TEXT);
-    system_print_text("Enter System PIN code:", 48, 60, 0, COLOR_TEXT);
-    system_print_text("[ _ ] [ _ ] [ _ ] [ _ ]", 48, 90, 0, COLOR_TEXT);
+    
+    system_print_text("Enter System PIN code:", 48, 60, 0, COLOR_BLACK);
+    
+    system_print_text("[ _ ]   [ _ ]   [ _ ]   [ _ ]", 36, 90, 0, COLOR_BLACK);
     
     int active_grid_slot = 0;
     int entered_digits_count = 0;
@@ -316,19 +319,22 @@ int main(void) {
                 } else {
                     trigger_beep_sound(220); 
                     entered_digits_count = 0;
-                    system_print_text("[ _ ] [ _ ] [ _ ] [ _ ]", 48, 90, 0, COLOR_TEXT);
+                    system_print_text("[ _ ]   [ _ ]   [ _ ]   [ _ ]", 36, 90, 0, COLOR_BLACK);
                 }
             } 
             else if (active_grid_slot == 9) {
                 entered_digits_count = 0;
-                system_print_text("[ _ ] [ _ ] [ _ ] [ _ ]", 48, 90, 0, COLOR_TEXT);
+                system_print_text("[ _ ]   [ _ ]   [ _ ]   [ _ ]", 36, 90, 0, COLOR_BLACK);
             }
             else {
                 int typed_value = (active_grid_slot == 10) ? 0 : (active_grid_slot + 1);
                 if (entered_digits_count < 4) {
                     trigger_beep_sound(600);
                     input_pin_buffer[entered_digits_count] = typed_value;
-                    system_print_text("*", 56 + (entered_digits_count * 40), 90, 0, COLOR_SELECT);
+                    
+                    int target_asterisk_x = 44 + (entered_digits_count * 56);
+                    system_print_text("*", target_asterisk_x, 90, 0, COLOR_BLACK);
+                    
                     entered_digits_count++;
                 }
             }
