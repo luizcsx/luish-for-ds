@@ -14,7 +14,7 @@
 #define KEY_DOWN   (1 << 7)
 #define KEY_A      (1 << 0)
 
-#define VRAM_BOTTOM   ((volatile unsigned short*)0x06200000)
+#define NEW_VRAM_BOTTOM   ((volatile unsigned short*)0x06600000)
 
 void wait_vblank(void) {
     while (REG_VCOUNT >= 192);
@@ -38,7 +38,7 @@ void clear_bottom_character_slot(int x, int y) {
         for (int col = 0; col < 8; col++) {
             int pixel = (y + row) * 256 + (x + col);
             if (pixel >= 0 && pixel < 256 * 192) {
-                VRAM_BOTTOM[pixel] = COLOR_BACKGROUND;
+                NEW_VRAM_BOTTOM[pixel] = COLOR_BACKGROUND;
             }
         }
     }
@@ -59,7 +59,7 @@ void draw_main_menu(void) {
     video_clear_screens();
     video_draw_divider();
     
-    video_print_text_ext("Luish", 32, 40, 0);
+    video_print_text_ext("LUISH MENU", 32, 40, 0);
     
     video_print_text_ext("  1. Credits", 48, 64, 1);
     video_print_text_ext("  2. Back", 48, 80, 1);
