@@ -17,9 +17,9 @@
 #define VRAM_TOP        ((volatile unsigned short*)0x06800000)
 #define VRAM_BOTTOM     ((volatile unsigned short*)0x06600000)
 
-#define COLOR_BACKGROUND 0x0000 
-#define COLOR_TEXT       0x7FFF 
-#define COLOR_ACCENT     0x03E0 
+#define COLOR_BACKGROUND 0x0000
+#define COLOR_TEXT       0x7FFF
+#define COLOR_ACCENT     0x03E0
 
 #define KEY_UP     (1 << 6)
 #define KEY_DOWN   (1 << 7)
@@ -87,10 +87,10 @@ void local_video_init(void) {
     REG_POWERCNT = 0x80000000; 
     
     VRAM_A_CR = 0x80;
-    REG_DISPCNT = 0x00020400; 
+    REG_DISPCNT = 0x00020400;
     
     VRAM_D_CR = 0x80;
-    REG_DB_DISPCNT = 0x00020400; 
+    REG_DB_DISPCNT = 0x00020400;
     
     for (int i = 0; i < 256 * 192; i++) {
         VRAM_TOP[i] = COLOR_BACKGROUND;
@@ -158,10 +158,10 @@ void draw_welcome_screen(void) {
     local_video_init();
     local_draw_divider();
     
-    local_print_text("Initialize the system?", 32, 40, 0);
+    local_print_text("Initialize Luish?", 32, 40, 0);
     local_print_text("  Yes", 48, 64, 1);
     local_print_text("  No", 48, 80, 1);
-    local_print_text(">", 48, 64, 1); 
+    local_print_text(">", 48, 64, 1);
 }
 
 void draw_main_menu(void) {
