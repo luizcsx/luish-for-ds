@@ -47,7 +47,7 @@ void clear_bottom_character_slot(int x, int y) {
 void draw_welcome_screen(void) {
     video_clear_screens();
     video_draw_divider();
-    video_print_text_ext("Initialize the system?", 32, 40, 0);
+    video_print_text_ext("Quer iniciar a build nova?", 32, 40, 0);
     video_print_text_ext("  Yes", 48, 64, 1);
     video_print_text_ext("  No", 48, 80, 1);
     video_print_text_ext(">", 48, 64, 1); 
