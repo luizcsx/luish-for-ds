@@ -87,7 +87,7 @@ void video_init(void) {
     VRAM_A_CR = 0x80; 
     REG_DISPCNT = 0x00020400; 
     
-    VRAM_C_CR = 0x81; 
+    VRAM_C_CR = 0x82; 
     REG_DB_DISPCNT = 0x00020400; 
     
     video_clear_screens(); 
