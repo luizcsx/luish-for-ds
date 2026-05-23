@@ -1,67 +1,41 @@
-DEVKITPRO ?= /opt/devkitpro
-DEVKITARM  ?= $(DEVKITPRO)/devkitARM
+.SUFFIXES:
 
-export PATH := $(DEVKITARM)/bin:$(PATH)
+ifeq ($(strip $(DEVKITARM)),)
+$(error "Defina DEVKITARM: export DEVKITARM=/opt/devkitpro/devkitARM")
+endif
 
-PREFIX  = arm-none-eabi-
-CC      = $(PREFIX)gcc
-AS      = $(PREFIX)as
-LD      = $(PREFIX)gcc
-OBJCOPY = $(PREFIX)objcopy
-NDSTOOL = $(DEVKITPRO)/tools/bin/ndstool
+include $(DEVKITARM)/ds_rules
 
-LIBNDS  = $(DEVKITPRO)/libnds
+TARGET   := luish
+BUILD    := build
+SOURCES  := source
+INCLUDES := include
+DATA     :=
+GRAPHICS :=
+NITRO    :=
 
-ARCH    = -mthumb-interwork -marm -mcpu=arm946e-s -mtune=arm946e-s
+ARCH := -march=armv5te -mtune=arm946e-s
 
-CFLAGS9 = $(ARCH) -O2 -Wall \
-           -I. -Idata \
-           -I$(LIBNDS)/include \
-           -fomit-frame-pointer \
-           -DARM9
+CFLAGS   := -g -Wall -O2 -ffunction-sections -fdata-sections \
+             $(ARCH) $(INCLUDE) -DARM9
 
-CFLAGS7 = -mthumb-interwork -marm -mcpu=arm7tdmi -mtune=arm7tdmi \
-           -O2 -Wall \
-           -I$(LIBNDS)/include \
-           -fomit-frame-pointer \
-           -DARM7
+CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions
+ASFLAGS  := -g $(ARCH)
+LDFLAGS   = -specs=ds_arm9.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LDFLAGS9 = $(ARCH) \
-            -specs=$(DEVKITARM)/arm-none-eabi/lib/ds_arm9.specs \
-            -L$(LIBNDS)/lib
+LIBS    := -lnds9
+LIBDIRS := $(LIBNDS)
 
-LDFLAGS7 = -mthumb-interwork -marm -mcpu=arm7tdmi \
-            -specs=$(DEVKITARM)/arm-none-eabi/lib/ds_arm7.specs \
-            -L$(LIBNDS)/lib
+ifneq ($(BUILD),$(notdir $(CURDIR)))
 
-OBJS9 = main.o data/video.o
+export OUTPUT  := $(CURDIR)/$(TARGET)
+export TOPDIR  := $(CURDIR)
 
-all: main.nds
+export VPATH := $(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
+                $(foreach dir,$(DATA),$(CURDIR)/$(dir))
 
-main.nds: arm9.bin arm7.bin
-	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -g LUSH 0000 "Luish"
-	rm -f arm9.bin arm7.bin
+export DEPSDIR := $(CURDIR)/$(BUILD)
 
-arm9.bin: arm9.elf
-	$(OBJCOPY) -O binary $< $@
-
-arm9.elf: $(OBJS9)
-	$(LD) $(LDFLAGS9) $(OBJS9) -lnds9 -o $@
-
-arm7.bin: arm7.elf
-	$(OBJCOPY) -O binary $< $@
-
-arm7.elf: arm7.o
-	$(LD) $(LDFLAGS7) arm7.o -lnds7 -o $@
-
-arm7.o: arm7.c
-	$(CC) $(CFLAGS7) -c arm7.c -o arm7.o
-
-data/video.o: data/video.c data/video.h
-	$(CC) $(CFLAGS9) -c data/video.c -o data/video.o
-
-%.o: %.c
-	$(CC) $(CFLAGS9) -c $< -o $@
-
-clean:
-	rm -f *.o data/*.o *.elf *.bin *.nds
+# Coleta todos os .c da pasta source/, EXCETO arm7.c
+CFILES_ALL := $(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
+CFILES
