@@ -1,38 +1,60 @@
-DEVKITARM = /opt/devkitpro/devkitARM
+DEVKITPRO ?= /opt/devkitpro
+DEVKITARM  ?= $(DEVKITPRO)/devkitARM
 
-CC      = $(DEVKITARM)/bin/arm-none-eabi-gcc
-AS      = $(DEVKITARM)/bin/arm-none-eabi-as
-LD      = $(DEVKITARM)/bin/arm-none-eabi-ld
-OBJCOPY = $(DEVKITARM)/bin/arm-none-eabi-objcopy
-NDSTOOL = /opt/devkitpro/tools/bin/ndstool
+export PATH := $(DEVKITARM)/bin:$(PATH)
 
-CFLAGS  = -mthumb-interwork -marm -O2 -Wall -I. -I./data -I./wmf
-ASFLAGS = -mthumb-interwork
+PREFIX  = arm-none-eabi-
+CC      = $(PREFIX)gcc
+AS      = $(PREFIX)as
+LD      = $(PREFIX)gcc
+OBJCOPY = $(PREFIX)objcopy
+NDSTOOL = $(DEVKITPRO)/tools/bin/ndstool
 
-OBJS = main.o data/video.o
+LIBNDS  = $(DEVKITPRO)/libnds
+
+ARCH    = -mthumb-interwork -marm -mcpu=arm946e-s -mtune=arm946e-s
+
+CFLAGS  = $(ARCH) -O2 -Wall \
+           -I. -Idata \
+           -I$(LIBNDS)/include \
+           -fomit-frame-pointer
+
+LDFLAGS = $(ARCH) \
+           -specs=$(DEVKITPRO)/devkitARM/arm-none-eabi/lib/ds_arm9.specs \
+           -L$(LIBNDS)/lib
+
+LIBS    = -lnds9
+
+OBJS9   = main.o data/video.o
 
 all: main.nds
 
-main.nds: main.elf arm7.bin
-	$(OBJCOPY) -O binary main.elf arm9.bin
-	
-	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -g LUSH
-	
-	rm -f arm9.bin arm7.bin arm7.elf arm7.o
+main.nds: arm9.bin arm7.bin
+	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -g LUSH 0000 "Luish OS"
+	rm -f arm9.bin arm7.bin
 
-arm7.bin: arm7.c
-	$(CC) $(CFLAGS) -c arm7.c -o arm7.o
-	$(LD) -Ttext 0x03800000 arm7.o -o arm7.elf
-	$(OBJCOPY) -O binary arm7.elf arm7.bin
+arm9.bin: arm9.elf
+	$(OBJCOPY) -O binary $< $@
 
-main.elf: crt0.o $(OBJS)
-	$(LD) -T nds.ld crt0.o $(OBJS) -o main.elf
+arm9.elf: $(OBJS9)
+	$(LD) $(LDFLAGS) $(OBJS9) $(LIBS) -o $@
+
+arm7.bin: arm7.elf
+	$(OBJCOPY) -O binary $< $@
+
+arm7.elf: arm7.o
+	$(LD) -mthumb-interwork -marm \
+	      -specs=$(DEVKITPRO)/devkitARM/arm-none-eabi/lib/ds_arm7.specs \
+	      -L$(LIBNDS)/lib arm7.o -lnds7 -o $@
+
+arm7.o: arm7.c
+	$(CC) $(ARCH) -I$(LIBNDS)/include -O2 -c arm7.c -o arm7.o
+
+data/video.o: data/video.c data/video.h
+	$(CC) $(CFLAGS) -c data/video.c -o data/video.o
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
-
-crt0.o: crt0.s
-	$(AS) $(ASFLAGS) crt0.s -o crt0.o
 
 clean:
 	rm -f *.o data/*.o *.elf *.bin *.nds
