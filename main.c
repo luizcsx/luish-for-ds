@@ -5,7 +5,6 @@
 
 #define REG_SOUNDCNT      *(volatile unsigned short*)0x04000500
 #define REG_SOUNDBIAS     *(volatile unsigned short*)0x04000504
-
 #define REG_CH0_CNT       *(volatile unsigned int*)0x04000400
 #define REG_CH0_SAD       *(volatile unsigned int*)0x04000404
 #define REG_CH0_TMR       *(volatile unsigned short*)0x04000408
@@ -23,15 +22,15 @@ void wait_vblank(void) {
 }
 
 void init_native_audio(void) {
-    REG_SOUNDCNT = 0x807F;
-    REG_SOUNDBIAS = 0x0200;
+    REG_SOUNDCNT = 0x807F;   
+    REG_SOUNDBIAS = 0x0200;  
 }
 
 void trigger_audio_loop(void) {
-    REG_CH0_SAD = 0x023F0000; 
-    REG_CH0_TMR = (unsigned short)(-16777216 / 22050);
-    REG_CH0_LEN = 0x7FFF;
-    REG_CH0_CNT = 0xC47F0000;
+    REG_CH0_SAD = 0x023F4000; 
+    REG_CH0_TMR = (unsigned short)(-16777216 / 22050); 
+    REG_CH0_LEN = 0xFFFF;     
+    REG_CH0_CNT = 0xC47F0000; 
 }
 
 void clear_bottom_character_slot(int x, int y) {
@@ -57,10 +56,20 @@ void draw_welcome_screen(void) {
 void draw_main_menu(void) {
     video_clear_screens();
     video_draw_divider();
-    video_print_text_ext("Luish", 32, 40, 1);
+    video_print_text_ext("LUISH", 32, 40, 1);
     video_print_text_ext("  1. Credits", 48, 64, 1);
     video_print_text_ext("  2. Back", 48, 80, 1);
+    video_print_text_ext("  3. Terminal Mode", 48, 96, 1);
     video_print_text_ext(">", 48, 64, 1); 
+}
+
+void draw_terminal_screen(void) {
+    video_clear_screens();
+    video_draw_divider();
+    video_print_text_ext("luish://sys/tmode: ", 16, 40, 0);
+    
+    video_print_text_ext("  Back", 48, 64, 1);
+    video_print_text_ext(">", 48, 64, 1);
 }
 
 int main(void) {
@@ -69,7 +78,7 @@ int main(void) {
     trigger_audio_loop();
     wait_vblank();
     
-    int current_screen = 0;       
+    int current_screen = 0;
     int selected_option = 0;      
     unsigned short last_keys = 0xFFFF;
 
@@ -109,16 +118,15 @@ int main(void) {
             }
         }
         else if (current_screen == 1) {
-            if (pressed_keys & (KEY_DOWN | KEY_UP)) {
-                if (selected_option == 0) {
-                    clear_bottom_character_slot(48, 64);
-                    selected_option = 1;
-                    video_print_text_ext(">", 48, 80, 1);
-                } else {
-                    clear_bottom_character_slot(48, 80);
-                    selected_option = 0;
-                    video_print_text_ext(">", 48, 64, 1);
-                }
+            if (pressed_keys & KEY_DOWN) {
+                clear_bottom_character_slot(48, 64 + (selected_option * 16));
+                selected_option = (selected_option + 1) % 3;
+                video_print_text_ext(">", 48, 64 + (selected_option * 16), 1);
+            }
+            else if (pressed_keys & KEY_UP) {
+                clear_bottom_character_slot(48, 64 + (selected_option * 16));
+                selected_option = (selected_option - 1 + 3) % 3;
+                video_print_text_ext(">", 48, 64 + (selected_option * 16), 1);
             }
 
             if (pressed_keys & KEY_A) {
@@ -133,6 +141,18 @@ int main(void) {
                     selected_option = 0; 
                     draw_welcome_screen();
                 }
+                else if (selected_option == 2) {
+                    current_screen = 2;
+                    selected_option = 0;
+                    draw_terminal_screen();
+                }
+            }
+        }
+        else if (current_screen == 2) {
+            if (pressed_keys & KEY_A) {
+                current_screen = 1;
+                selected_option = 0;
+                draw_main_menu();
             }
         }
     }
