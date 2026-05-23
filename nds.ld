@@ -8,8 +8,11 @@ MEMORY {
 SECTIONS {
     . = 0x02000000;
     
+    .init : {
+        KEEP(*(.init))
+    } > RAM_ARM9
+
     .text : ALIGN(4) {
-        *(.init)
         *(.text)
         *(.text.*)
         *(.rodata)
