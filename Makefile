@@ -9,22 +9,24 @@ NDSTOOL = /opt/devkitpro/tools/bin/ndstool
 CFLAGS  = -mthumb-interwork -marm -O2 -Wall -I. -I./data -I./wmf
 ASFLAGS = -mthumb-interwork
 
+LIBGCC  = $(DEVKITARM)/lib/gcc/arm-none-eabi/$(shell $(CC) -dumpversion)
+
 OBJS = main.o data/video.o
 
 all: main.nds
 
 main.nds: main.elf arm7.bin
 	$(OBJCOPY) -O binary main.elf arm9.bin
-	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -g LUSH
+	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -g LUSH -t "Luish for Nintendo DS"
 	rm -f arm9.bin arm7.bin arm7.elf arm7.o
 
 arm7.bin: arm7.c
 	$(CC) $(CFLAGS) -c arm7.c -o arm7.o
-	$(LD) -Ttext 0x03800000 arm7.o -o arm7.elf
+	$(LD) -Ttext 0x03800000 arm7.o -lgcc -L$(LIBGCC) -o arm7.elf
 	$(OBJCOPY) -O binary arm7.elf arm7.bin
 
 main.elf: crt0.o $(OBJS)
-	$(LD) -T nds.ld crt0.o $(OBJS) -lgcc -L$(DEVKITARM)/lib/gcc/arm-none-eabi/$(shell $(CC) -dumpversion) -o main.elf
+	$(LD) -T nds.ld crt0.o $(OBJS) -lgcc -L$(LIBGCC) -o main.elf
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
