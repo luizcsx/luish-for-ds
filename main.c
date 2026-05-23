@@ -47,9 +47,7 @@ void clear_bottom_character_slot(int x, int y) {
 void draw_welcome_screen(void) {
     video_clear_screens();
     video_draw_divider();
-    
     video_print_text_ext("Initialize the system?", 32, 40, 0);
-    
     video_print_text_ext("  Yes", 48, 64, 1);
     video_print_text_ext("  No", 48, 80, 1);
     video_print_text_ext(">", 48, 64, 1); 
@@ -58,9 +56,7 @@ void draw_welcome_screen(void) {
 void draw_main_menu(void) {
     video_clear_screens();
     video_draw_divider();
-    
     video_print_text_ext("LUISH MENU", 32, 40, 0);
-    
     video_print_text_ext("  1. Credits", 48, 64, 1);
     video_print_text_ext("  2. Back", 48, 80, 1);
     video_print_text_ext("  3. Terminal Mode", 48, 96, 1);
@@ -70,9 +66,7 @@ void draw_main_menu(void) {
 void draw_terminal_screen(void) {
     video_clear_screens();
     video_draw_divider();
-    
     video_print_text_ext("luish://sys/tmode: ", 16, 40, 0);
-    
     video_print_text_ext("  Back", 48, 64, 1);
     video_print_text_ext(">", 48, 64, 1);
 }
@@ -123,14 +117,13 @@ int main(void) {
             }
         }
         else if (current_screen == 1) {
-            if (pressed_keys & KEY_DOWN) {
+            if (pressed_keys & (KEY_DOWN | KEY_UP)) {
                 clear_bottom_character_slot(48, 64 + (selected_option * 16));
-                selected_option = (selected_option + 1) % 3;
-                video_print_text_ext(">", 48, 64 + (selected_option * 16), 1);
-            }
-            else if (pressed_keys & KEY_UP) {
-                clear_bottom_character_slot(48, 64 + (selected_option * 16));
-                selected_option = (selected_option - 1 + 3) % 3;
+                if (pressed_keys & KEY_DOWN) {
+                    selected_option = (selected_option + 1) % 3;
+                } else {
+                    selected_option = (selected_option - 1 + 3) % 3;
+                }
                 video_print_text_ext(">", 48, 64 + (selected_option * 16), 1);
             }
 
