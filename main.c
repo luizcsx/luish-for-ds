@@ -28,7 +28,7 @@ void init_native_audio(void) {
 
 void trigger_audio_loop(void) {
     REG_CH0_SAD = 0x023F0000; 
-    REG_CH0_TMR = (unsigned short)(-16777216 / 32000);
+    REG_CH0_TMR = (unsigned short)(-16777216 / 32000); 
     REG_CH0_LEN = 0xFFFF;     
     REG_CH0_CNT = 0xC47F0000; 
 }
