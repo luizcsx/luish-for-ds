@@ -4,24 +4,27 @@
 #define REG_DB_DISPCNT  *(volatile unsigned int*)0x04001000
 #define VRAM_D_CR       *(volatile unsigned int*)0x04000243
 
-#define REG_KEYINPUT      *(volatile unsigned short*)0x04000130
-#define REG_VCOUNT        *(volatile unsigned short*)0x04000006
+#define REG_KEYINPUT    *(volatile unsigned short*)0x04000130
+#define REG_VCOUNT      *(volatile unsigned short*)0x04000006
 
-#define REG_SOUNDCNT      *(volatile unsigned short*)0x04000500
-#define REG_SOUNDBIAS     *(volatile unsigned short*)0x04000504
-#define REG_CH0_CNT       *(volatile unsigned int*)0x04000400
-#define REG_CH0_TMR       *(volatile unsigned short*)0x04000408
+#define REG_SOUNDCNT    *(volatile unsigned short*)0x04000500
+#define REG_SOUNDBIAS   *(volatile unsigned short*)0x04000504
+#define REG_CH0_CNT     *(volatile unsigned int*)0x04000400
+#define REG_CH0_TMR     *(volatile unsigned short*)0x04000408
 
 #define VRAM_TOP        ((volatile unsigned short*)0x06800000)
 #define VRAM_BOTTOM     ((volatile unsigned short*)0x06600000)
 
-#define COLOR_BACKGROUND 0x0000 // Preto Absoluto
-#define COLOR_TEXT       0x7FFF // Branco
-#define COLOR_ACCENT     0x03E0 // Verde
+#define COLOR_BG        0x4200
+#define COLOR_TEXT      0x7FFF
+#define COLOR_SELECT    0x03E0
+#define COLOR_BLACK     0x0000
 
-#define KEY_UP     (1 << 6)
-#define KEY_DOWN   (1 << 7)
-#define KEY_A      (1 << 0)
+#define KEY_UP          (1 << 6)
+#define KEY_DOWN        (1 << 7)
+#define KEY_LEFT        (1 << 5)
+#define KEY_RIGHT       (1 << 4)
+#define KEY_A           (1 << 0)
 
 const unsigned char basic_font[128][8] = {
     [' '] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
@@ -32,8 +35,10 @@ const unsigned char basic_font[128][8] = {
     ['/'] = {0x00, 0x0C, 0x18, 0x30, 0x60, 0x40, 0x00, 0x00},
     ['_'] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x00},
     ['-'] = {0x00, 0x00, 0x00, 0x3E, 0x00, 0x00, 0x00, 0x00},
-    ['*'] = {0x00, 0x24, 0x18, 0x7E, 0x18, 0x24, 0x00, 0x00},
-    ['%'] = {0x62, 0x66, 0x0C, 0x18, 0x30, 0x66, 0x46, 0x00},
+    ['*'] = {0x00, 0x24, 0x18, 0x7E, 0x18, 0x24, 0x00, 0x00}, 
+    ['%'] = {0x62, 0x66, 0x0C, 0x18, 0x30, 0x66, 0x46, 0x00}, 
+    ['['] = {0x1E, 0x18, 0x18, 0x18, 0x18, 0x18, 0x1E, 0x00},
+    [']'] = {0x78, 0x18, 0x18, 0x18, 0x18, 0x18, 0x78, 0x00},
 
     ['0'] = {0x3C, 0x66, 0x6E, 0x76, 0x66, 0x3C, 0x00, 0x00},
     ['1'] = {0x18, 0x38, 0x18, 0x18, 0x18, 0x7E, 0x00, 0x00},
@@ -101,7 +106,7 @@ const unsigned char basic_font[128][8] = {
     ['z'] = {0x00, 0x7E, 0x0C, 0x18, 0x30, 0x7E, 0x00, 0x00}
 };
 
-void local_video_init(void) {
+void system_video_init(void) {
     REG_POWERCNT = 0x80000000; 
     
     VRAM_A_CR = 0x80;
@@ -111,19 +116,12 @@ void local_video_init(void) {
     REG_DB_DISPCNT = 0x00020400;
     
     for (int i = 0; i < 256 * 192; i++) {
-        VRAM_TOP[i] = COLOR_BACKGROUND;
-        VRAM_BOTTOM[i] = COLOR_BACKGROUND;
+        VRAM_TOP[i] = COLOR_BG;
+        VRAM_BOTTOM[i] = COLOR_BG;
     }
 }
 
-void local_draw_divider(void) {
-    for (int x = 0; x < 256; x++) {
-        VRAM_TOP[20 * 256 + x] = COLOR_ACCENT;
-        VRAM_BOTTOM[20 * 256 + x] = COLOR_ACCENT;
-    }
-}
-
-void local_print_text(const char* text, int x, int y, int target_screen) {
+void system_print_text(const char* text, int x, int y, int target_screen, unsigned short color) {
     volatile unsigned short* vram = (target_screen == 0) ? VRAM_TOP : VRAM_BOTTOM;
     int current_x = x;
     while (*text) {
@@ -134,7 +132,7 @@ void local_print_text(const char* text, int x, int y, int target_screen) {
                 if (row_data & (0x80 >> col)) {
                     int pixel = (y + row) * 256 + (current_x + col);
                     if (pixel >= 0 && pixel < 256 * 192) {
-                        vram[pixel] = COLOR_TEXT;
+                        vram[pixel] = color;
                     }
                 }
             }
@@ -144,13 +142,31 @@ void local_print_text(const char* text, int x, int y, int target_screen) {
     }
 }
 
-void clear_bottom_character_slot(int x, int y) {
-    for (int row = 0; row < 8; row++) {
-        for (int col = 0; col < 8; col++) {
-            int pixel = (y + row) * 256 + (x + col);
-            if (pixel >= 0 && pixel < 256 * 192) {
-                VRAM_BOTTOM[pixel] = COLOR_BACKGROUND;
-            }
+void draw_horizontal_divider(void) {
+    for (int x = 0; x < 256; x++) {
+        VRAM_TOP[24 * 256 + x] = COLOR_TEXT;
+        VRAM_BOTTOM[24 * 256 + x] = COLOR_TEXT;
+    }
+}
+
+void draw_progress_bar_frame(void) {
+    for (int x = 48; x < 208; x++) {
+        VRAM_TOP[100 * 256 + x] = COLOR_TEXT;
+        VRAM_TOP[112 * 256 + x] = COLOR_TEXT;
+    }
+    for (int y = 100; y <= 112; y++) {
+        VRAM_TOP[y * 256 + 48] = COLOR_TEXT;
+        VRAM_TOP[y * 256 + 208] = COLOR_TEXT;
+    }
+}
+
+void update_progress_bar_fill(int percentage) {
+    int max_width = 158; 
+    int current_width = (percentage * max_width) / 100;
+    
+    for (int y = 102; y < 111; y++) {
+        for (int x = 50; x < 50 + current_width; x++) {
+            VRAM_TOP[y * 256 + x] = COLOR_SELECT;
         }
     }
 }
@@ -160,126 +176,208 @@ void wait_vblank(void) {
     while (REG_VCOUNT < 192);
 }
 
-void init_hardware_psg_audio(void) {
-    REG_SOUNDCNT = 0x807F;
-    REG_SOUNDBIAS = 0x0200;
-    
-    REG_CH0_TMR = (unsigned short)(-16777216 / (440 * 8)); 
-    REG_CH0_CNT = 0xC77F0000;
+void init_hardware_audio(void) {
+    REG_SOUNDCNT = 0x807F;     
+    REG_SOUNDBIAS = 0x0200;    
 }
 
-void draw_welcome_screen(void) {
-    local_video_init();
-    local_draw_divider();
-    
-    local_print_text("Initialize Luish?", 32, 40, 0);
-    local_print_text("  Yes", 48, 64, 1);
-    local_print_text("  No", 48, 80, 1);
-    local_print_text(">", 48, 64, 1);                        
+void trigger_beep_sound(int frequency) {
+    REG_CH0_TMR = (unsigned short)(-16777216 / (frequency * 8)); 
+    REG_CH0_CNT = 0x877F0000;
+    for(int i=0; i<10; i++) wait_vblank();
+    REG_CH0_CNT = 0x00000000;
 }
 
-void draw_main_menu(void) {
-    local_video_init();
-    local_draw_divider();
-    
-    local_print_text("MAIN MENU", 32, 40, 0);
-    local_print_text("  1. Credits", 48, 64, 1);             
-    local_print_text("  2. Back", 48, 80, 1);                
-    local_print_text("  3. Terminal Mode", 48, 96, 1);       
-    local_print_text(">", 48, 64, 1); 
-}
+const char grid_characters[12][4] = {
+    "1", "2", "3",
+    "4", "5", "6",
+    "7", "8", "9",
+    "-", "0", "OK"
+};
 
-void draw_terminal_screen(void) {
-    local_video_init();
-    local_draw_divider();
-    
-    local_print_text("luish://sys/tmode: ", 16, 40, 0);    
-    local_print_text("  Back", 48, 64, 1);                 
-    local_print_text(">", 48, 64, 1);
+const int grid_positions_x[12] = {
+    64, 120, 176,
+    64, 120, 176,
+    64, 120, 176,
+    64, 120, 176
+};
+
+const int grid_positions_y[12] = {
+    60,  60,  60,
+    90,  90,  90,
+    120, 120, 120,
+    150, 150, 150
+};
+
+void draw_security_pin_grid(int active_index) {
+    for (int i = 0; i < 12; i++) {
+        unsigned short current_color = (i == active_index) ? COLOR_SELECT : COLOR_TEXT;
+        system_print_text("[   ]", grid_positions_x[i] - 8, grid_positions_y[i], 1, current_color);
+        system_print_text(grid_characters[i], grid_positions_x[i], grid_positions_y[i], 1, current_color);
+    }
 }
 
 int main(void) {
-    local_video_init();
-    init_hardware_psg_audio();
+    system_video_init();
+    init_hardware_audio();
     wait_vblank();
     
-    int current_screen = 0;       
-    int selected_option = 0;      
-    unsigned short last_keys = 0xFFFF;
-
-    draw_welcome_screen();
-
-    while (1) {
+    system_print_text("Luish Factory Setup", 8, 8, 0, COLOR_TEXT);
+    draw_horizontal_divider();
+    system_print_text("Loading Luish files...", 48, 70, 0, COLOR_TEXT);
+    draw_progress_bar_frame();
+    
+    char progress_string[5] = "0%";
+    for (int progress = 0; progress <= 100; progress++) {
         wait_vblank();
-        
-        unsigned short current_keys = REG_KEYINPUT;
-        unsigned short pressed_keys = (last_keys ^ current_keys) & (~current_keys);
-        last_keys = current_keys;
-
-        if (current_screen == 0) {
-            if (pressed_keys & (KEY_DOWN | KEY_UP)) {
-                if (selected_option == 0) {
-                    clear_bottom_character_slot(48, 64);
-                    selected_option = 1;
-                    local_print_text(">", 48, 80, 1);
-                } else {
-                    clear_bottom_character_slot(48, 80);
-                    selected_option = 0;
-                    local_print_text(">", 48, 64, 1);
-                }
-            }
+        if (progress % 2 == 0) {
+            update_progress_bar_fill(progress);
             
-            if (pressed_keys & KEY_A) {
-                if (selected_option == 0) {
-                    current_screen = 1;
-                    selected_option = 0; 
-                    draw_main_menu();
-                } else {
-                    local_video_init();
-                    local_draw_divider();
-                    local_print_text("Boot aborted.", 32, 64, 0);
-                    while(1) { wait_vblank(); }
-                }
+            if (progress < 10) {
+                progress_string[0] = '0' + progress;
+                progress_string[1] = '%';
+                progress_string[2] = '\0';
+            } else if (progress < 100) {
+                progress_string[0] = '0' + (progress / 10);
+                progress_string[1] = '0' + (progress % 10);
+                progress_string[2] = '%';
+                progress_string[3] = '\0';
+            } else {
+                progress_string[0] = '1';
+                progress_string[1] = '0';
+                progress_string[2] = '0';
+                progress_string[3] = '%';
+                progress_string[4] = '\0';
             }
+            system_print_text(progress_string, 112, 130, 0, COLOR_SELECT);
         }
-        else if (current_screen == 1) {
-            if (pressed_keys & (KEY_DOWN | KEY_UP)) {
-                clear_bottom_character_slot(48, 64 + (selected_option * 16));
-                if (pressed_keys & KEY_DOWN) {
-                    selected_option = (selected_option + 1) % 3;
-                } else {
-                    selected_option = (selected_option - 1 + 3) % 3;
-                }
-                local_print_text(">", 48, 64 + (selected_option * 16), 1);
-            }
-
-            if (pressed_keys & KEY_A) {
-                if (selected_option == 0) {
-                    local_video_init();
-                    local_draw_divider();
-                    local_print_text("Made by Luiz Miguel.", 32, 64, 0);
-                    while(1) { wait_vblank(); }
-                } 
-                else if (selected_option == 1) {
-                    current_screen = 0;
-                    selected_option = 0; 
-                    draw_welcome_screen();
-                }
-                else if (selected_option == 2) {
-                    current_screen = 2;
-                    selected_option = 0;
-                    draw_terminal_screen();
-                }
-            }
+    }
+    
+    trigger_beep_sound(880);
+    
+    system_video_init();
+    draw_horizontal_divider();
+    system_print_text("Security Authorization", 8, 8, 0, COLOR_TEXT);
+    system_print_text("Enter System PIN code:", 48, 60, 0, COLOR_TEXT);
+    system_print_text("[ _ ] [ _ ] [ _ ] [ _ ]", 48, 90, 0, COLOR_TEXT);
+    
+    int active_grid_slot = 0;
+    int entered_digits_count = 0;
+    int input_pin_buffer[4] = {-1, -1, -1, -1};
+    const int actual_system_pin[4] = {1, 2, 3, 4};
+    
+    unsigned short previous_keys_state = 0xFFFF;
+    draw_security_pin_grid(active_grid_slot);
+    
+    int system_authenticated = 0;
+    while (!system_authenticated) {
+        wait_vblank();
+        unsigned short current_keys_state = REG_KEYINPUT;
+        unsigned short registered_presses = (previous_keys_state ^ current_keys_state) & (~current_keys_state);
+        previous_keys_state = current_keys_state;
+        
+        if (registered_presses & KEY_RIGHT) {
+            if (active_grid_slot % 3 < 2) active_grid_slot++;
+            draw_security_pin_grid(active_grid_slot);
         }
-        else if (current_screen == 2) {
-            if (pressed_keys & KEY_A) {
-                current_screen = 1;
-                selected_option = 0;
-                draw_main_menu();
+        if (registered_presses & KEY_LEFT) {
+            if (active_grid_slot % 3 > 0) active_grid_slot--;
+            draw_security_pin_grid(active_grid_slot);
+        }
+        if (registered_presses & KEY_DOWN) {
+            if (active_grid_slot < 9) active_grid_slot += 3;
+            draw_security_pin_grid(active_grid_slot);
+        }
+        if (registered_presses & KEY_UP) {
+            if (active_grid_slot >= 3) active_grid_slot -= 3;
+            draw_security_pin_grid(active_grid_slot);
+        }
+        
+        if (registered_presses & KEY_A) {
+            if (active_grid_slot == 11) {
+                if (entered_digits_count == 4 && 
+                    input_pin_buffer[0] == actual_system_pin[0] &&
+                    input_pin_buffer[1] == actual_system_pin[1] &&
+                    input_pin_buffer[2] == actual_system_pin[2] &&
+                    input_pin_buffer[3] == actual_system_pin[3]) {
+                    
+                    system_authenticated = 1;
+                } else {
+                    trigger_beep_sound(220);
+                    entered_digits_count = 0;
+                    system_print_text("[ _ ] [ _ ] [ _ ] [ _ ]", 48, 90, 0, COLOR_TEXT);
+                }
+            } 
+            else if (active_grid_slot == 9) {
+                entered_digits_count = 0;
+                system_print_text("[ _ ] [ _ ] [ _ ] [ _ ]", 48, 90, 0, COLOR_TEXT);
+            }
+            else {
+                int typed_value = (active_grid_slot == 10) ? 0 : (active_grid_slot + 1);
+                if (entered_digits_count < 4) {
+                    trigger_beep_sound(600);
+                    input_pin_buffer[entered_digits_count] = typed_value;
+                    system_print_text("*", 56 + (entered_digits_count * 40), 90, 0, COLOR_SELECT);
+                    entered_digits_count++;
+                }
             }
         }
     }
-
+    
+    trigger_beep_sound(1200);
+    system_video_init();
+    draw_horizontal_divider();
+    
+    system_print_text("Luish OS v1.0", 8, 8, 0, COLOR_TEXT);
+    system_print_text("22/05/2026 - 23:22", 104, 8, 0, COLOR_SELECT);
+    
+    system_print_text("System Active.", 48, 60, 0, COLOR_TEXT);
+    
+    system_print_text("1. Hardware Specifications", 24, 60, 1, COLOR_SELECT);
+    system_print_text("2. Reset Firmware Settings", 24, 90, 1, COLOR_TEXT);
+    system_print_text("3. Exit Console Shell", 24, 120, 1, COLOR_TEXT);
+    
+    int active_menu_index = 0;
+    while (1) {
+        wait_vblank();
+        unsigned short current_keys_state = REG_KEYINPUT;
+        unsigned short registered_presses = (previous_keys_state ^ current_keys_state) & (~current_keys_state);
+        previous_keys_state = current_keys_state;
+        
+        if (registered_presses & KEY_DOWN) {
+            system_print_text("1. Hardware Specifications", 24, 60, 1, (active_menu_index == 2) ? COLOR_SELECT : COLOR_TEXT);
+            system_print_text("2. Reset Firmware Settings", 24, 90, 1, (active_menu_index == 0) ? COLOR_SELECT : COLOR_TEXT);
+            system_print_text("3. Exit Console Shell", 24, 120, 1, (active_menu_index == 1) ? COLOR_SELECT : COLOR_TEXT);
+            active_menu_index = (active_menu_index + 1) % 3;
+            trigger_beep_sound(500);
+        }
+        if (registered_presses & KEY_UP) {
+            active_menu_index = (active_menu_index - 1 + 3) % 3;
+            system_print_text("1. Hardware Specifications", 24, 60, 1, (active_menu_index == 0) ? COLOR_SELECT : COLOR_TEXT);
+            system_print_text("2. Reset Firmware Settings", 24, 90, 1, (active_menu_index == 1) ? COLOR_SELECT : COLOR_TEXT);
+            system_print_text("3. Exit Console Shell", 24, 120, 1, (active_menu_index == 2) ? COLOR_SELECT : COLOR_TEXT);
+            trigger_beep_sound(500);
+        }
+        
+        if (registered_presses & KEY_A) {
+            if (active_menu_index == 0) {
+                system_video_init();
+                draw_horizontal_divider();
+                system_print_text("Hardware Diagnostics", 8, 8, 0, COLOR_TEXT);
+                
+                system_print_text("CPU: ARM946E-S & ARM7TDMI", 16, 50, 1, COLOR_TEXT);
+                system_print_text("BUS ENGINE: INTERNAL PSG", 16, 70, 1, COLOR_TEXT);
+                system_print_text("VRAM BLOCK MAP: DIRECT LCD", 16, 90, 1, COLOR_TEXT);
+                system_print_text("STATUS: OPERATIONAL", 16, 110, 1, COLOR_SELECT);
+                while(1) { wait_vblank(); }
+            }
+            else {
+                system_video_init();
+                draw_horizontal_divider();
+                system_print_text("Operation Halted.", 48, 80, 0, COLOR_TEXT);
+                while(1) { wait_vblank(); }
+            }
+        }
+    }
     return 0;
 }
