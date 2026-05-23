@@ -5,7 +5,6 @@
 #define REG_VCOUNT      *(volatile unsigned short*)0x04000006
 
 #define REG_DISPCNT     *(volatile unsigned int*)0x04000000
-
 #define REG_DB_DISPCNT  *(volatile unsigned int*)0x04001000
 
 #define VRAM_A_CR       *(volatile unsigned char*)0x04000240
