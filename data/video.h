@@ -12,7 +12,7 @@
 
 #define COLOR_BG     RGB15(4, 8, 4)
 #define COLOR_TEXT   RGB15(31,31,31)
-#define COLOR_SELECT RGB15(0, 31, 0) 
+#define COLOR_SELECT RGB15(0, 31, 0)
 #define COLOR_BLACK  RGB15(0, 0, 0)
 
 void video_init(void);
@@ -24,4 +24,4 @@ void draw_rect_outline(volatile unsigned short* vram, int x0, int y0, int x1, in
 void fill_rect(volatile unsigned short* vram, int x0, int y0, int x1, int y1, unsigned short color);
 void print_text(const char* text, int x, int y, volatile unsigned short* vram, unsigned short color);
 
-#endif /* VIDEO_H */
+#endif
