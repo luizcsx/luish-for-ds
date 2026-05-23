@@ -86,7 +86,7 @@ void video_init(void) {
 
     REG_DISPCNT = 0x00020000;
 
-    REG_DB_DISPCNT = 0x00060000;
+    REG_DB_DISPCNT = 0x00000805;
 
     fill_screen(VRAM_TOP,    COLOR_BG);
     fill_screen(VRAM_BOTTOM, COLOR_BG);
