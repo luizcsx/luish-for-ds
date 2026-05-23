@@ -77,59 +77,29 @@ static const unsigned char basic_font[128][8] = {
     ['z'] = {0x00,0x7E,0x0C,0x18,0x30,0x7E,0x00,0x00}
 };
 
+void fill_screen(volatile unsigned short* vram, unsigned short color) {
+    for (int i = 0; i < SCREEN_PIXELS; i++)
+        vram[i] = color;
+}
+
 void video_init(void) {
-    powerOn(POWER_ALL_2D);
-
-    /* VRAM-A → LCD superior (modo bitmap direto) */
-    VRAM_A_CR = VRAM_ENABLE | VRAM_A_LCD;
-
-    /* VRAM-C → engine B / LCD inferior */
-    VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
-
-    /* Engine A: modo 5, BG2 ativo */
-    REG_DISPCNT = MODE_5_2D | DISPLAY_BG2_ACTIVE;
-
-    /* Engine B: modo 5, BG2 ativo */
-    REG_DISPCNT_SUB = MODE_5_2D | DISPLAY_BG2_ACTIVE;
-
-    /* BG2 engine A — bitmap 256x256 16-bit */
-    BGCTRL[2]     = BG_BMP16_256x256 | BG_BMP_BASE(0);
-    BG_OFFSET[2].x = 0;
-    BG_OFFSET[2].y = 0;
-    BG2_XDX = 1 << 8;
-    BG2_XDY = 0;
-    BG2_YDX = 0;
-    BG2_YDY = 1 << 8;
-    BG2_CX  = 0;
-    BG2_CY  = 0;
-
-    /* BG2 engine B — bitmap 256x256 16-bit */
-    BGCTRL_SUB[2]     = BG_BMP16_256x256 | BG_BMP_BASE(0);
-    BG_OFFSET_SUB[2].x = 0;
-    BG_OFFSET_SUB[2].y = 0;
-    BG2_D_XDX = 1 << 8;
-    BG2_D_XDY = 0;
-    BG2_D_YDX = 0;
-    BG2_D_YDY = 1 << 8;
-    BG2_D_CX  = 0;
-    BG2_D_CY  = 0;
-
+    REG_POWERCNT   = 0x820F;
+    VRAM_A_CR      = 0x80;
+    VRAM_C_CR      = 0x84;
+    REG_DISPCNT    = 0x00020000;
+    REG_DB_DISPCNT = 0x00000805;
     fill_screen(VRAM_TOP,    COLOR_BG);
     fill_screen(VRAM_BOTTOM, COLOR_BG);
 }
 
 void wait_vblank(void) {
-    swiWaitForVBlank();
+    while (REG_VCOUNT >= SCREEN_H);
+    while (REG_VCOUNT < SCREEN_H);
 }
 
 void draw_pixel(volatile unsigned short* vram, int x, int y, unsigned short color) {
     if ((unsigned)x < SCREEN_W && (unsigned)y < SCREEN_H)
         vram[y * SCREEN_W + x] = color;
-}
-
-void fill_screen(volatile unsigned short* vram, unsigned short color) {
-    for (int i = 0; i < SCREEN_PIXELS; i++)
-        vram[i] = color;
 }
 
 void draw_hline(volatile unsigned short* vram, int y, unsigned short color) {
@@ -141,8 +111,7 @@ void draw_hline(volatile unsigned short* vram, int y, unsigned short color) {
 }
 
 void draw_rect_outline(volatile unsigned short* vram,
-                       int x0, int y0, int x1, int y1,
-                       unsigned short color) {
+                       int x0, int y0, int x1, int y1, unsigned short color) {
     for (int x = x0; x <= x1; x++) {
         draw_pixel(vram, x, y0, color);
         draw_pixel(vram, x, y1, color);
@@ -154,8 +123,7 @@ void draw_rect_outline(volatile unsigned short* vram,
 }
 
 void fill_rect(volatile unsigned short* vram,
-               int x0, int y0, int x1, int y1,
-               unsigned short color) {
+               int x0, int y0, int x1, int y1, unsigned short color) {
     for (int y = y0; y <= y1; y++)
         for (int x = x0; x <= x1; x++)
             draw_pixel(vram, x, y, color);
