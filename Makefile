@@ -14,47 +14,54 @@ LIBNDS  = $(DEVKITPRO)/libnds
 
 ARCH    = -mthumb-interwork -marm -mcpu=arm946e-s -mtune=arm946e-s
 
-CFLAGS  = $(ARCH) -O2 -Wall \
+CFLAGS9 = $(ARCH) -O2 -Wall \
            -I. -Idata \
            -I$(LIBNDS)/include \
-           -fomit-frame-pointer
+           -fomit-frame-pointer \
+           -DARM9
 
-LDFLAGS = $(ARCH) \
-           -specs=$(DEVKITPRO)/devkitARM/arm-none-eabi/lib/ds_arm9.specs \
-           -L$(LIBNDS)/lib
+CFLAGS7 = -mthumb-interwork -marm -mcpu=arm7tdmi -mtune=arm7tdmi \
+           -O2 -Wall \
+           -I$(LIBNDS)/include \
+           -fomit-frame-pointer \
+           -DARM7
 
-LIBS    = -lnds9
+LDFLAGS9 = $(ARCH) \
+            -specs=$(DEVKITARM)/arm-none-eabi/lib/ds_arm9.specs \
+            -L$(LIBNDS)/lib
 
-OBJS9   = main.o data/video.o
+LDFLAGS7 = -mthumb-interwork -marm -mcpu=arm7tdmi \
+            -specs=$(DEVKITARM)/arm-none-eabi/lib/ds_arm7.specs \
+            -L$(LIBNDS)/lib
+
+OBJS9 = main.o data/video.o
 
 all: main.nds
 
 main.nds: arm9.bin arm7.bin
-	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -g LUSH 0000 "Luish OS"
+	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -g LUSH 0000 "Luish"
 	rm -f arm9.bin arm7.bin
 
 arm9.bin: arm9.elf
 	$(OBJCOPY) -O binary $< $@
 
 arm9.elf: $(OBJS9)
-	$(LD) $(LDFLAGS) $(OBJS9) $(LIBS) -o $@
+	$(LD) $(LDFLAGS9) $(OBJS9) -lnds9 -o $@
 
 arm7.bin: arm7.elf
 	$(OBJCOPY) -O binary $< $@
 
 arm7.elf: arm7.o
-	$(LD) -mthumb-interwork -marm \
-	      -specs=$(DEVKITPRO)/devkitARM/arm-none-eabi/lib/ds_arm7.specs \
-	      -L$(LIBNDS)/lib arm7.o -lnds7 -o $@
+	$(LD) $(LDFLAGS7) arm7.o -lnds7 -o $@
 
 arm7.o: arm7.c
-	$(CC) $(ARCH) -I$(LIBNDS)/include -O2 -c arm7.c -o arm7.o
+	$(CC) $(CFLAGS7) -c arm7.c -o arm7.o
 
 data/video.o: data/video.c data/video.h
-	$(CC) $(CFLAGS) -c data/video.c -o data/video.o
+	$(CC) $(CFLAGS9) -c data/video.c -o data/video.o
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS9) -c $< -o $@
 
 clean:
 	rm -f *.o data/*.o *.elf *.bin *.nds
