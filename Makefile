@@ -20,6 +20,9 @@ video.o:
 		$(CC) $(CFLAGS) -c data/video.c -o video.o; \
 	fi
 
+font.o: font.c
+	$(CC) $(CFLAGS) -c font.c -o font.o
+
 main.o: main.c
 	$(CC) $(CFLAGS) -c main.c -o main.o
 
@@ -31,9 +34,10 @@ arm7.bin: arm7.c
 	$(LD) -Ttext 0x03800000 arm7.o -lgcc -L$(LIBGCC) -o arm7.elf
 	$(OBJCOPY) -O binary arm7.elf arm7.bin
 
-main.elf: crt0.o main.o video.o
-	$(LD) -T nds.ld crt0.o main.o video.o -lgcc -L$(LIBGCC) -o main.elf
+main.elf: crt0.o main.o video.o font.o
+	$(LD) -T nds.ld crt0.o main.o video.o font.o -lgcc -L$(LIBGCC) -o main.elf
 
 main.nds: main.elf arm7.bin
-	$(NDSTOOL) -c main.nds -9 main.elf -7 arm7.bin -g LUSH 01 "Luish"
-	rm -f arm7.bin arm7.elf arm7.o crt0.o main.o video.o main.elf
+	$(OBJCOPY) -O binary main.elf arm9.bin
+	$(NDSTOOL) -c main.nds -9 arm9.bin -7 arm7.bin -d nitrofiles -g LUSH 01 "Luish"
+	rm -f arm9.bin arm7.bin arm7.elf arm7.o crt0.o main.o video.o font.o main.elf
