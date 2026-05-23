@@ -80,14 +80,19 @@ static const unsigned char basic_font[128][8] = {
 void video_init(void) {
     powerOn(POWER_ALL_2D);
 
+    /* VRAM-A → LCD superior (modo bitmap direto) */
     VRAM_A_CR = VRAM_ENABLE | VRAM_A_LCD;
 
+    /* VRAM-C → engine B / LCD inferior */
     VRAM_C_CR = VRAM_ENABLE | VRAM_C_SUB_BG;
 
+    /* Engine A: modo 5, BG2 ativo */
     REG_DISPCNT = MODE_5_2D | DISPLAY_BG2_ACTIVE;
 
+    /* Engine B: modo 5, BG2 ativo */
     REG_DISPCNT_SUB = MODE_5_2D | DISPLAY_BG2_ACTIVE;
 
+    /* BG2 engine A — bitmap 256x256 16-bit */
     BGCTRL[2]     = BG_BMP16_256x256 | BG_BMP_BASE(0);
     BG_OFFSET[2].x = 0;
     BG_OFFSET[2].y = 0;
@@ -98,6 +103,7 @@ void video_init(void) {
     BG2_CX  = 0;
     BG2_CY  = 0;
 
+    /* BG2 engine B — bitmap 256x256 16-bit */
     BGCTRL_SUB[2]     = BG_BMP16_256x256 | BG_BMP_BASE(0);
     BG_OFFSET_SUB[2].x = 0;
     BG_OFFSET_SUB[2].y = 0;
